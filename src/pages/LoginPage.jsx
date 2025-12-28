@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Form, Input, Select } from 'antd'
+import { Button, Card, Form, Input, Select, message } from 'antd'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
+import { useUser } from '../contexts/UserContext'
 
 const roleOptions = [
   { value: USER_ROLES.CUSTOMER, label: ROLE_LABELS_ID[USER_ROLES.CUSTOMER] },
@@ -12,6 +13,8 @@ const roleOptions = [
 const LoginPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const { login } = useUser()
+  const [loading, setLoading] = useState(false)
 
   const role = useMemo(() => {
     const fromQuery = params.get('role')
@@ -19,11 +22,31 @@ const LoginPage = () => {
     return localStorage.getItem(AUTH_STORAGE_KEYS.ROLE) || USER_ROLES.CUSTOMER
   }, [params])
 
-  const onFinish = (values) => {
-    // UI only: simulate login success
-    localStorage.setItem(AUTH_STORAGE_KEYS.ROLE, values.role)
-    if (values.role === USER_ROLES.ADMIN) navigate('/admin')
-    else navigate('/produk')
+  const onFinish = async (values) => {
+    setLoading(true)
+    try {
+      // Simulasi login - dalam real app, ini akan call API
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Login dengan UserContext
+      login({
+        email: values.email,
+        role: values.role,
+        name: values.email.split('@')[0], // Mock name from email
+      })
+      
+      message.success('Berhasil masuk')
+      
+      if (values.role === USER_ROLES.ADMIN) {
+        navigate('/admin')
+      } else {
+        navigate('/produk')
+      }
+    } catch (error) {
+      message.error('Gagal masuk. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -70,15 +93,16 @@ const LoginPage = () => {
                 <Link to="/onboarding" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
                   Ganti peran
                 </Link>
-                <button type="button" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
+                <Link to="/lupa-password" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
                   Lupa kata sandi?
-                </button>
+                </Link>
               </div>
 
               <Button
                 htmlType="submit"
                 type="primary"
                 size="large"
+                loading={loading}
                 className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
               >
                 Masuk

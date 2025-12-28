@@ -1,12 +1,28 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Input } from 'antd'
-import { BellIcon, Bars3Icon, MagnifyingGlassIcon, ShoppingBagIcon, UserIcon } from '@heroicons/react/24/outline'
+import { Input, Dropdown, Avatar, Menu } from 'antd'
+import { 
+  BellIcon, 
+  Bars3Icon, 
+  MagnifyingGlassIcon, 
+  ShoppingBagIcon, 
+  UserIcon,
+  HeartIcon,
+  ShoppingCartIcon,
+  MapPinIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/react/24/outline'
+import { useUser } from '../contexts/UserContext'
+import { useCart } from '../contexts/CartContext'
 
 const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
+  const { user, isAuthenticated, logout } = useUser()
+  const { cartItems } = useCart()
+  
+  const cartCount = cartItems.length
 
   const handleSearch = () => {
     if (searchValue.trim()) {
@@ -72,7 +88,9 @@ const Header = () => {
             <nav className="hidden md:flex items-center gap-4 mr-10">
               <Link to="/" className={navLinkClass('/')}>Beranda</Link>
               <Link to="/produk" className={navLinkClass('/produk')}>Katalog Produk</Link>
-              <Link to="/onboarding" className={navLinkClass('/onboarding')}>Masuk</Link>
+              {!isAuthenticated && (
+                <Link to="/onboarding" className={navLinkClass('/onboarding')}>Masuk</Link>
+              )}
             </nav>
 
             <div className="flex items-center gap-3 flex-shrink pr-8">
@@ -92,17 +110,78 @@ const Header = () => {
                 className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative no-underline"
               >
                 <ShoppingBagIcon className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
-                  0
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
 
-              <button
-                type="button"
-                className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
-              >
-                <UserIcon className="w-5 h-5" />
-              </button>
+              {isAuthenticated ? (
+                <Dropdown
+                  overlay={
+                    <Menu>
+                      <Menu.Item key="profile" onClick={() => navigate('/profil')}>
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4" />
+                          <span>Profil Saya</span>
+                        </div>
+                      </Menu.Item>
+                      <Menu.Item key="orders" onClick={() => navigate('/pesanan')}>
+                        <div className="flex items-center gap-2">
+                          <ShoppingCartIcon className="w-4 h-4" />
+                          <span>Pesanan Saya</span>
+                        </div>
+                      </Menu.Item>
+                      <Menu.Item key="wishlist" onClick={() => navigate('/wishlist')}>
+                        <div className="flex items-center gap-2">
+                          <HeartIcon className="w-4 h-4" />
+                          <span>Wishlist</span>
+                        </div>
+                      </Menu.Item>
+                      <Menu.Item key="addresses" onClick={() => navigate('/alamat')}>
+                        <div className="flex items-center gap-2">
+                          <MapPinIcon className="w-4 h-4" />
+                          <span>Alamat Saya</span>
+                        </div>
+                      </Menu.Item>
+                      <Menu.Divider />
+                      <Menu.Item 
+                        key="logout" 
+                        danger
+                        onClick={() => {
+                          logout()
+                          navigate('/')
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                          <span>Keluar</span>
+                        </div>
+                      </Menu.Item>
+                    </Menu>
+                  }
+                  placement="bottomRight"
+                >
+                  <button
+                    type="button"
+                    className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
+                  >
+                    {user?.avatar ? (
+                      <Avatar src={user.avatar} size={32} />
+                    ) : (
+                      <UserIcon className="w-5 h-5" />
+                    )}
+                  </button>
+                </Dropdown>
+              ) : (
+                <Link
+                  to="/onboarding"
+                  className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
+                >
+                  <UserIcon className="w-5 h-5" />
+                </Link>
+              )}
 
               <button
                 type="button"

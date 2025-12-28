@@ -1,19 +1,26 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
-import { Button, Card, Row, Col, Tag, Descriptions, Divider, Avatar, Rate, Modal } from 'antd'
+import { Button, Card, Row, Col, Tag, Descriptions, Divider, Avatar, Rate, Modal, message } from 'antd'
 import { 
   ShoppingCartIcon,
   UserIcon,
   ArrowLeftIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  HeartIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
+import { useUser } from '../contexts/UserContext'
+import { useCart } from '../contexts/CartContext'
 
 const ProductDetail = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isImageModalVisible, setIsImageModalVisible] = useState(false)
+  const { toggleWishlist, isInWishlist } = useUser()
+  const { cartItems, setCartItems } = useCart()
 
   // Mock data - akan diganti dengan data dari API nanti
   const product = {
@@ -161,15 +168,25 @@ const ProductDetail = () => {
             <Divider className="my-4" />
 
             <div className="mb-6">
-              <Link to={`/artisan/${product.artisan.id}`}>
-                <Button 
-                  type="link" 
-                  icon={<UserIcon className="w-5 h-5" />}
-                  className="p-0 mb-4 text-wastra-brown-600 hover:text-wastra-brown-800"
+              <div className="flex items-center justify-between mb-4">
+                <Link to={`/artisan/${product.artisan.id}`}>
+                  <Button 
+                    type="link" 
+                    icon={<UserIcon className="w-5 h-5" />}
+                    className="p-0 text-wastra-brown-600 hover:text-wastra-brown-800"
+                  >
+                    <span className="text-lg">Toko: {product.artisan.name}</span>
+                  </Button>
+                </Link>
+                <Button
+                  type="default"
+                  icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
+                  onClick={() => navigate(`/chat/${product.artisan.id}?productId=${product.id}`)}
+                  className="border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400"
                 >
-                  <span className="text-lg">Toko: {product.artisan.name}</span>
+                  Chat Penjual
                 </Button>
-              </Link>
+              </div>
               <p className="text-wastra-brown-700 whitespace-pre-line leading-relaxed">
                 {product.description}
               </p>
@@ -189,14 +206,56 @@ const ProductDetail = () => {
               </Descriptions.Item>
             </Descriptions>
 
-            <Button 
-              type="primary" 
-              size="large"
-              icon={<ShoppingCartIcon className="w-5 h-5" />}
-              className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-12"
-            >
-              Tambah ke Keranjang
-            </Button>
+            <div className="flex gap-3">
+              <Button 
+                type="primary" 
+                size="large"
+                icon={<ShoppingCartIcon className="w-5 h-5" />}
+                className="flex-1 bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-12"
+                onClick={() => {
+                  const existingItem = cartItems.find(item => item.id === product.id)
+                  if (existingItem) {
+                    setCartItems(cartItems.map(item =>
+                      item.id === product.id
+                        ? { ...item, quantity: item.quantity + 1 }
+                        : item
+                    ))
+                  } else {
+                    setCartItems([
+                      ...cartItems,
+                      {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        image: product.images[0],
+                        thumbnail: product.images[0],
+                        selected: false,
+                        seller: product.artisan.name,
+                      },
+                    ])
+                  }
+                  message.success('Produk ditambahkan ke keranjang')
+                }}
+              >
+                Tambah ke Keranjang
+              </Button>
+              <Button
+                size="large"
+                icon={<HeartIcon className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />}
+                className={`h-12 ${isInWishlist(product.id) ? 'border-red-500 text-red-500' : ''}`}
+                onClick={() => {
+                  const added = toggleWishlist({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    image: product.images[0],
+                    artisan: product.artisan.name,
+                  })
+                  message.success(added ? 'Ditambahkan ke wishlist' : 'Dihapus dari wishlist')
+                }}
+              />
+            </div>
           </Card>
         </Col>
       </Row>

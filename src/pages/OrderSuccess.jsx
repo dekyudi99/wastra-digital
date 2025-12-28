@@ -38,11 +38,18 @@ const OrderSuccess = () => {
     orderId, 
     paymentMethod, 
     total, 
+    subtotal,
+    shippingCost,
+    shippingAddress,
     address, 
     products,
+    items,
     bankInfo,
     virtualAccount
   } = orderData
+
+  // Use items if available, otherwise fallback to products
+  const orderItems = items || products || []
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-wastra-brown-50 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -145,13 +152,13 @@ const OrderSuccess = () => {
             Ringkasan Pesanan
           </h2>
           <div className="space-y-3">
-            {products && products.map((item, index) => (
+            {orderItems.map((item, index) => (
               <div key={index} className="flex gap-4 pb-3 border-b border-wastra-brown-100 last:border-0">
                 <div className="flex-shrink-0">
                   <div className="w-20 h-20 bg-wastra-brown-50 rounded-lg overflow-hidden border border-wastra-brown-100">
-                    {item.thumbnail && (
+                    {(item.thumbnail || item.image) && (
                       <img 
-                        src={item.thumbnail} 
+                        src={item.thumbnail || item.image} 
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />
@@ -176,13 +183,13 @@ const OrderSuccess = () => {
               <div className="flex justify-between text-sm">
                 <span className="text-wastra-brown-600">Subtotal</span>
                 <span className="text-wastra-brown-800">
-                  {formatPrice(products?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0)}
+                  {formatPrice(subtotal || orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-wastra-brown-600">Ongkos Kirim</span>
                 <span className="text-wastra-brown-800">
-                  {formatPrice(orderData.shippingCost || 0)}
+                  {formatPrice(shippingCost || 0)}
                 </span>
               </div>
               <Divider className="my-2" />
@@ -197,15 +204,21 @@ const OrderSuccess = () => {
         </Card>
 
         {/* Shipping Address */}
-        {address && (
+        {(shippingAddress || address) && (
           <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm">
             <h2 className="text-lg font-semibold text-wastra-brown-800 mb-4">
               Alamat Pengiriman
             </h2>
             <div className="space-y-2 text-wastra-brown-700">
-              <p className="font-semibold">{address.name}</p>
-              <p className="text-sm">{address.phone}</p>
-              <p className="text-sm">{address.fullAddress || address.streetAddress}</p>
+              <p className="font-semibold">{(shippingAddress || address).name}</p>
+              <p className="text-sm">{(shippingAddress || address).phone}</p>
+              <p className="text-sm">
+                {(shippingAddress || address).streetAddress}
+                {(shippingAddress || address).district && `, ${(shippingAddress || address).district}`}
+                {(shippingAddress || address).regency && `, ${(shippingAddress || address).regency}`}
+                {(shippingAddress || address).province && `, ${(shippingAddress || address).province}`}
+                {(shippingAddress || address).postalCode && ` ${(shippingAddress || address).postalCode}`}
+              </p>
             </div>
           </Card>
         )}

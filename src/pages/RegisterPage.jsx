@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Form, Input, Select } from 'antd'
+import { Button, Card, Form, Input, Select, message } from 'antd'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
+import { useUser } from '../contexts/UserContext'
 
 const roleOptions = [
   { value: USER_ROLES.CUSTOMER, label: ROLE_LABELS_ID[USER_ROLES.CUSTOMER] },
@@ -12,6 +13,8 @@ const roleOptions = [
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
+  const { login } = useUser()
+  const [loading, setLoading] = useState(false)
 
   const role = useMemo(() => {
     const fromQuery = params.get('role')
@@ -19,10 +22,27 @@ const RegisterPage = () => {
     return localStorage.getItem(AUTH_STORAGE_KEYS.ROLE) || USER_ROLES.CUSTOMER
   }, [params])
 
-  const onFinish = (values) => {
-    // UI only: simulate register success
-    localStorage.setItem(AUTH_STORAGE_KEYS.ROLE, values.role)
-    navigate(`/masuk?role=${values.role}`)
+  const onFinish = async (values) => {
+    setLoading(true)
+    try {
+      // Simulasi register - dalam real app, ini akan call API
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Auto login setelah register
+      login({
+        email: values.email,
+        name: values.name,
+        role: values.role,
+        phone: '',
+      })
+      
+      message.success('Akun berhasil dibuat')
+      navigate(`/masuk?role=${values.role}`)
+    } catch (error) {
+      message.error('Gagal membuat akun. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -94,6 +114,7 @@ const RegisterPage = () => {
                 htmlType="submit"
                 type="primary"
                 size="large"
+                loading={loading}
                 className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
               >
                 Buat Akun

@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Avatar, Badge, Input } from 'antd'
 import { UserIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 
 const Notifications = () => {
+  const navigate = useNavigate()
   const [activeChat, setActiveChat] = useState(null)
   const [message, setMessage] = useState('')
 
@@ -58,7 +60,11 @@ const Notifications = () => {
         {chats.map(chat => (
           <div
             key={chat.id}
-            onClick={() => setActiveChat(chat)}
+            onClick={() => {
+              setActiveChat(chat)
+              // Also navigate to chat detail page
+              navigate(`/chat/${chat.id}`)
+            }}
             className={`flex gap-4 px-5 py-4 cursor-pointer border-b border-wastra-brown-100
               hover:bg-wastra-brown-50
               ${activeChat?.id === chat.id ? 'bg-wastra-brown-100' : ''}`}

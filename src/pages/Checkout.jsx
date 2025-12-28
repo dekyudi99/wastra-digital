@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button, Radio, Input, Modal, Form, Select } from 'antd'
+import { Card, Button, Radio, Input, Modal, Form, Select, Upload, message } from 'antd'
+import { PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { 
   ArrowLeftIcon,
   MapPinIcon,
@@ -10,12 +11,14 @@ import {
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
 import { useCart } from '../contexts/CartContext'
+import { useUser } from '../contexts/UserContext'
 import { provinces, regencies, districts } from '../utils/indonesiaRegions'
 import { getSellerBanks, getSellerInfo } from '../utils/sellerBankAccounts'
 
 const Checkout = () => {
   const navigate = useNavigate()
-  const { getSelectedItems } = useCart()
+  const { getSelectedItems, removeSelectedItems } = useCart()
+  const { addOrder, addresses, getDefaultAddress, addAddress, updateAddress } = useUser()
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [voucherCode, setVoucherCode] = useState('')
   const [shippingOption, setShippingOption] = useState('reguler')
@@ -27,12 +30,30 @@ const Checkout = () => {
   const [selectedSeller, setSelectedSeller] = useState(null) // Seller yang dipilih untuk pembayaran
   const [virtualAccount, setVirtualAccount] = useState(null)
   const [orderId, setOrderId] = useState(null)
+  const [proofFile, setProofFile] = useState(null)
   const [form] = Form.useForm()
   const [paymentForm] = Form.useForm()
   const [selectedProvince, setSelectedProvince] = useState(null)
   const [selectedRegency, setSelectedRegency] = useState(null)
   const [selectedDistrict, setSelectedDistrict] = useState(null)
   const [mapLocation, setMapLocation] = useState({ lat: -8.4095, lng: 115.1889 }) // Default: Bali
+
+  // Load default address on mount and when addresses change
+  useEffect(() => {
+    const defaultAddr = getDefaultAddress()
+    if (defaultAddr) {
+      // Jika alamat yang sedang dipilih masih ada di daftar, update. Jika tidak, gunakan default
+      if (address && address.id && addresses.find(addr => addr.id === address.id)) {
+        const updatedAddr = addresses.find(addr => addr.id === address.id)
+        setAddress(updatedAddr)
+      } else if (defaultAddr) {
+        setAddress(defaultAddr)
+      }
+    } else if (addresses.length > 0 && !address) {
+      // Jika tidak ada default tapi ada alamat, gunakan alamat pertama
+      setAddress(addresses[0])
+    }
+  }, [addresses, getDefaultAddress])
 
   // Generate Virtual Account Number
   const generateVirtualAccount = (bankId, sellerName) => {
@@ -72,6 +93,10 @@ const Checkout = () => {
   }
 
   const handleEditAddress = () => {
+    if (!address) {
+      message.warning('Pilih alamat terlebih dahulu')
+      return
+    }
     form.setFieldsValue({
       name: address?.name || '',
       streetAddress: address?.streetAddress || '',
@@ -79,7 +104,8 @@ const Checkout = () => {
       province: address?.province || null,
       regency: address?.regency || null,
       district: address?.district || null,
-      postalCode: address?.postalCode || ''
+      postalCode: address?.postalCode || '',
+      notes: address?.notes || ''
     })
     setSelectedProvince(address?.province || null)
     setSelectedRegency(address?.regency || null)
@@ -126,7 +152,7 @@ const Checkout = () => {
     const regencyName = regencies[values.province]?.find(r => r.id === values.regency)?.name || ''
     const districtName = districts[values.regency]?.find(d => d.id === values.district)?.name || ''
     
-    setAddress({
+    const addressData = {
       name: values.name,
       phone: values.phone,
       streetAddress: values.streetAddress,
@@ -137,8 +163,25 @@ const Checkout = () => {
       district: values.district,
       districtName: districtName,
       postalCode: values.postalCode,
+      notes: values.notes || null,
       fullAddress: `${values.streetAddress}, ${districtName}, ${regencyName}, ${provinceName} ${values.postalCode}`
-    })
+    }
+    
+    // Check if editing existing address
+    if (address && address.id) {
+      // Update existing address
+      updateAddress(address.id, addressData)
+      // Update current address state
+      const updatedAddress = { ...address, ...addressData }
+      setAddress(updatedAddress)
+      message.success('Alamat berhasil diperbarui')
+    } else {
+      // Add new address
+      const savedAddress = addAddress(addressData)
+      setAddress(savedAddress)
+      message.success('Alamat berhasil ditambahkan')
+    }
+    
     setIsAddressModalVisible(false)
     form.resetFields()
     setSelectedProvince(null)
@@ -196,7 +239,18 @@ const Checkout = () => {
 
   const handleCheckout = () => {
     if (!address) {
-      alert('Silakan tambahkan alamat pengiriman terlebih dahulu')
+      message.error('Pilih alamat pengiriman terlebih dahulu')
+      return
+    }
+
+    if (selectedItems.length === 0) {
+      message.error('Pilih produk terlebih dahulu')
+      return
+    }
+
+    // Validasi alamat lengkap
+    if (!address.streetAddress || !address.province || !address.regency || !address.district) {
+      message.error('Lengkapi alamat pengiriman terlebih dahulu')
       return
     }
 
@@ -211,14 +265,39 @@ const Checkout = () => {
       setOrderId(newOrderId)
       
       // Prepare order data
+      // COD langsung processing karena pembayaran saat terima barang
       const orderData = {
+        id: newOrderId,
         orderId: newOrderId,
         paymentMethod: 'cod',
         total: total,
-        address: address,
-        products: selectedItems,
-        shippingCost: shippingCost
+        subtotal: subtotal,
+        shippingCost: shippingCost,
+        shippingAddress: address,
+        items: selectedItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          image: item.thumbnail || item.image,
+          thumbnail: item.thumbnail || item.image,
+        })),
+        // Keep products for backward compatibility
+        products: selectedItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          thumbnail: item.thumbnail || item.image,
+        })),
+        status: 'processing' // COD langsung processing karena pembayaran saat terima barang
       }
+      
+      // Add order to UserContext
+      addOrder(orderData)
+      
+      // Remove selected items from cart after successful checkout
+      removeSelectedItems()
       
       // Save to localStorage as backup
       localStorage.setItem('lastOrder', JSON.stringify(orderData))
@@ -257,13 +336,33 @@ const Checkout = () => {
     const bank = sellerBanks.find(b => b.id === selectedBank)
     
     // Prepare order data
+    // Status: jika ada bukti transfer, langsung processing. Jika tidak, tetap pending
+    const orderStatus = proofFile ? 'processing' : 'pending'
+    
     const orderData = {
+      id: orderId,
       orderId: orderId,
       paymentMethod: 'bank',
       total: total,
-      address: address,
-      products: selectedItems,
+      subtotal: subtotal,
       shippingCost: shippingCost,
+      shippingAddress: address,
+      items: selectedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        image: item.thumbnail || item.image,
+        thumbnail: item.thumbnail || item.image,
+      })),
+      // Keep products for backward compatibility
+      products: selectedItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        thumbnail: item.thumbnail || item.image,
+      })),
       bankInfo: {
         bankName: bank?.name,
         accountName: bank?.accountName,
@@ -272,8 +371,23 @@ const Checkout = () => {
       },
       virtualAccount: virtualAccount,
       transferDate: values.transferDate,
-      transferAmount: values.transferAmount
+      transferAmount: values.transferAmount,
+      proofOfPayment: proofFile ? {
+        name: proofFile.name,
+        size: proofFile.size,
+        type: proofFile.type,
+        // Simulasi: convert file to base64 untuk storage (dalam real app, upload ke server)
+        url: proofFile instanceof File ? URL.createObjectURL(proofFile) : null
+      } : null,
+      notes: values.notes || null,
+      status: orderStatus // Set status berdasarkan ada/tidaknya bukti transfer
     }
+    
+    // Add order to UserContext
+    addOrder(orderData)
+    
+    // Remove selected items from cart after successful checkout
+    removeSelectedItems()
     
     // Save to localStorage as backup
     localStorage.setItem('lastOrder', JSON.stringify(orderData))
@@ -281,6 +395,7 @@ const Checkout = () => {
     // Close modal
     setIsPaymentModalVisible(false)
     setIsPaymentInstructionVisible(false)
+    setProofFile(null)
     paymentForm.resetFields()
     
     // Navigate to success page with order data
@@ -334,10 +449,10 @@ const Checkout = () => {
   }
 
   return (
-    <div className="w-full bg-wastra-brown-50 min-h-screen pb-32">
-      <div className="bg-white border-b border-wastra-brown-100">
-        <div className="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 max-w-6xl py-4">
-          <p className="text-sm text-gray-400 mb-2">Halaman Checkout</p>
+    <div className="w-full bg-wastra-brown-50 min-h-screen pb-40">
+      {/* Header */}
+      <div className="bg-white border-b border-wastra-brown-100 sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-4">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
@@ -346,82 +461,258 @@ const Checkout = () => {
             >
               <ArrowLeftIcon className="w-6 h-6 text-wastra-brown-800" />
             </button>
-            <h1 className="text-3xl font-bold text-wastra-brown-800">
-              Checkout
-            </h1>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-wastra-brown-800">
+                Checkout
+              </h1>
+              <p className="text-sm text-wastra-brown-500 mt-1">
+                Lengkapi informasi untuk menyelesaikan pesanan
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 max-w-6xl py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6">
         {/* Delivery Address Section */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3">
+        <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-start justify-between mb-4 pb-4 border-b border-wastra-brown-100">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-wastra-brown-100 rounded-lg flex items-center justify-center">
                 <MapPinIcon className="w-5 h-5 text-wastra-brown-600" />
+              </div>
+              <div>
                 <h2 className="text-lg font-semibold text-wastra-brown-800">
                   Alamat Pengiriman
                 </h2>
+                <p className="text-xs text-wastra-brown-500 mt-0.5">
+                  Pilih atau tambah alamat pengiriman
+                </p>
               </div>
-              {address ? (
-                <div>
-                  <p className="text-base font-semibold text-wastra-brown-800 mb-1">
-                    {address.name}
-                  </p>
-                  <p className="text-sm text-wastra-brown-600 mb-1">
-                    {address.fullAddress || address.streetAddress}
-                  </p>
-                  <p className="text-sm text-wastra-brown-600">
-                    {address.phone}
-                  </p>
-                </div>
-              ) : (
-                <div className="py-4">
-                  <p className="text-sm text-wastra-brown-600 mb-4">
-                    Belum ada alamat pengiriman. Silakan tambahkan alamat terlebih dahulu.
-                  </p>
-                  <Button
-                    type="primary"
-                    icon={<PlusIcon className="w-4 h-4" />}
-                    className="bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-10 px-6 rounded-lg"
-                    onClick={handleAddAddress}
-                  >
-                    Tambah Alamat
-                  </Button>
-                </div>
-              )}
             </div>
-            {address && (
-              <Button
-                type="text"
-                className="text-wastra-brown-600 hover:text-wastra-brown-800"
-                onClick={handleEditAddress}
-              >
-                Ubah
-              </Button>
-            )}
+            <Button
+              type="text"
+              icon={<PlusIcon className="w-4 h-4" />}
+              size="small"
+              className="text-wastra-brown-600 hover:text-wastra-brown-800 hover:bg-wastra-brown-50"
+              onClick={handleAddAddress}
+            >
+              Tambah Baru
+            </Button>
           </div>
+
+          {/* Select Address Dropdown */}
+          {addresses.length > 0 && (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-wastra-brown-700 mb-2">
+                Pilih Alamat
+              </label>
+              <Select
+                size="large"
+                placeholder="Pilih alamat pengiriman"
+                value={address?.id}
+                onChange={(addressId) => {
+                  const selectedAddr = addresses.find(addr => addr.id === addressId)
+                  if (selectedAddr) {
+                    setAddress(selectedAddr)
+                  }
+                }}
+                className="w-full"
+                showSearch
+                filterOption={(input, option) => {
+                  const text = option?.children?.[0]?.props?.children || ''
+                  const addressText = option?.children?.[1]?.props?.children || ''
+                  return (text + ' ' + addressText).toLowerCase().includes(input.toLowerCase())
+                }}
+                optionLabelProp="label"
+              >
+                {addresses.map((addr) => {
+                  // Get names dengan validasi
+                  const districtName = addr.district && districts[addr.regency] 
+                    ? districts[addr.regency].find(d => d.id === addr.district)?.name 
+                    : null
+                  const regencyName = addr.regency && regencies[addr.province]
+                    ? regencies[addr.province].find(r => r.id === addr.regency)?.name
+                    : null
+                  const provinceName = addr.province
+                    ? provinces.find(p => p.id === addr.province)?.name
+                    : null
+                  
+                  // Build address parts tanpa duplikasi
+                  const addressParts = []
+                  if (districtName && districtName !== regencyName) {
+                    addressParts.push(districtName)
+                  }
+                  if (regencyName) {
+                    addressParts.push(regencyName)
+                  }
+                  if (provinceName) {
+                    addressParts.push(provinceName)
+                  }
+                  if (addr.postalCode) {
+                    addressParts.push(addr.postalCode)
+                  }
+                  
+                  const locationText = addressParts.length > 0 ? addressParts.join(', ') : ''
+                  
+                  return (
+                    <Select.Option 
+                      key={addr.id} 
+                      value={addr.id}
+                      label={addr.name}
+                    >
+                      <div className="py-2">
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="font-semibold text-wastra-brown-800 text-sm">{addr.name}</div>
+                          {addr.isDefault && (
+                            <span className="px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-wastra-brown-600 mt-1 leading-relaxed">
+                          {addr.streetAddress}
+                        </div>
+                        {locationText && (
+                          <div className="text-xs text-wastra-brown-400 mt-0.5">
+                            {locationText}
+                          </div>
+                        )}
+                      </div>
+                    </Select.Option>
+                  )
+                })}
+              </Select>
+            </div>
+          )}
+
+          {/* Display Selected Address */}
+          {address ? (
+            <div className="p-5 bg-gradient-to-br from-wastra-brown-50 to-white rounded-xl border-2 border-wastra-brown-200 shadow-sm">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  {/* Nama & Default Badge */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-lg font-bold text-wastra-brown-800">
+                      {address.name}
+                    </p>
+                    {address.isDefault && (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                        Default
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Alamat Detail */}
+                  <div className="space-y-2 text-sm">
+                    {/* Telepon */}
+                    <div className="flex items-center gap-2 text-wastra-brown-700">
+                      <span className="text-wastra-brown-500 font-medium min-w-[80px]">Telepon:</span>
+                      <span className="font-medium">{address.phone}</span>
+                    </div>
+
+                    {/* Alamat Lengkap */}
+                    <div className="flex items-start gap-2 text-wastra-brown-700">
+                      <span className="text-wastra-brown-500 font-medium min-w-[80px] mt-0.5">Alamat:</span>
+                      <div className="flex-1 space-y-1">
+                        <p className="font-medium">{address.streetAddress}</p>
+                        <p className="text-wastra-brown-600">
+                          {(() => {
+                            const parts = []
+                            if (address.district) {
+                              const districtName = districts[address.regency]?.find(d => d.id === address.district)?.name
+                              if (districtName) parts.push(districtName)
+                            }
+                            if (address.regency) {
+                              const regencyName = regencies[address.province]?.find(r => r.id === address.regency)?.name
+                              if (regencyName) parts.push(regencyName)
+                            }
+                            if (address.province) {
+                              const provinceName = provinces.find(p => p.id === address.province)?.name
+                              if (provinceName) parts.push(provinceName)
+                            }
+                            if (address.postalCode) {
+                              parts.push(address.postalCode)
+                            }
+                            return parts.join(', ')
+                          })()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Catatan */}
+                    {address.notes && (
+                      <div className="mt-3 pt-3 border-t border-wastra-brown-200">
+                        <div className="flex items-start gap-2">
+                          <span className="text-wastra-brown-500 font-medium text-xs min-w-[80px]">Catatan:</span>
+                          <p className="text-xs text-wastra-brown-600 italic flex-1">
+                            {address.notes}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type="text"
+                  size="small"
+                  className="text-wastra-brown-600 hover:text-wastra-brown-800 hover:bg-wastra-brown-100 flex-shrink-0 rounded-lg px-3"
+                  onClick={handleEditAddress}
+                >
+                  Ubah
+                </Button>
+              </div>
+            </div>
+          ) : addresses.length === 0 ? (
+            <div className="py-8 text-center bg-wastra-brown-50 rounded-lg border-2 border-dashed border-wastra-brown-200">
+              <MapPinIcon className="w-12 h-12 text-wastra-brown-300 mx-auto mb-3" />
+              <p className="text-sm font-medium text-wastra-brown-600 mb-2">
+                Belum ada alamat pengiriman
+              </p>
+              <p className="text-xs text-wastra-brown-500 mb-4">
+                Silakan tambahkan alamat terlebih dahulu
+              </p>
+              <Button
+                type="primary"
+                icon={<PlusIcon className="w-4 h-4" />}
+                size="small"
+                className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
+                onClick={handleAddAddress}
+              >
+                Tambah Alamat
+              </Button>
+            </div>
+          ) : null}
         </Card>
 
         {/* Seller and Products Section */}
         {Object.entries(productsBySeller).map(([seller, items]) => (
-          <Card key={seller} className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <BuildingOfficeIcon className="w-5 h-5 text-wastra-brown-600" />
-              <h2 className="text-lg font-semibold text-wastra-brown-800">
-                {seller}
-              </h2>
+          <Card key={seller} className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-wastra-brown-100">
+              <div className="w-10 h-10 bg-wastra-brown-100 rounded-lg flex items-center justify-center">
+                <BuildingOfficeIcon className="w-5 h-5 text-wastra-brown-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-wastra-brown-800">
+                  {seller}
+                </h2>
+                <p className="text-xs text-wastra-brown-500 mt-0.5">
+                  {items.length} {items.length === 1 ? 'produk' : 'produk'}
+                </p>
+              </div>
             </div>
             <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex gap-4">
+                <div key={item.id} className="flex gap-4 p-3 bg-wastra-brown-50 rounded-lg hover:bg-wastra-brown-100 transition-colors">
                   <div className="flex-shrink-0">
-                    <div className="w-24 h-24 bg-wastra-brown-50 rounded-lg overflow-hidden border border-wastra-brown-100">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg overflow-hidden border-2 border-wastra-brown-200 shadow-sm">
                       <img 
-                        src={item.thumbnail} 
+                        src={item.thumbnail || item.image} 
                         alt={item.name}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src = 'https://via.placeholder.com/150?text=Product'
+                        }}
                       />
                     </div>
                   </div>
@@ -429,12 +720,22 @@ const Checkout = () => {
                     <h3 className="text-base font-semibold text-wastra-brown-800 mb-2 line-clamp-2">
                       {item.name}
                     </h3>
-                    <p className="text-xl font-bold text-red-600 mb-1">
-                      {formatPrice(item.price)}
-                    </p>
-                    <p className="text-sm text-wastra-brown-600">
-                      {item.quantity}x
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-lg font-bold text-red-600 mb-1">
+                          {formatPrice(item.price)}
+                        </p>
+                        <p className="text-sm text-wastra-brown-600">
+                          Qty: <span className="font-medium">{item.quantity}</span>
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-wastra-brown-500 mb-1">Subtotal</p>
+                        <p className="text-base font-bold text-wastra-brown-800">
+                          {formatPrice(item.price * item.quantity)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -443,32 +744,52 @@ const Checkout = () => {
         ))}
 
         {/* Voucher Section */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
+        <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
-            <span className="text-base font-medium text-wastra-brown-800">Voucher</span>
+            <div>
+              <span className="text-base font-semibold text-wastra-brown-800 block">Voucher Diskon</span>
+              {voucherCode ? (
+                <p className="text-sm text-green-600 mt-1 font-medium">
+                  ✓ Kode: {voucherCode}
+                </p>
+              ) : (
+                <p className="text-xs text-wastra-brown-500 mt-1">
+                  Punya kode voucher?
+                </p>
+              )}
+            </div>
             <Button
-              type="text"
-              className="text-wastra-brown-600 hover:text-wastra-brown-800"
+              type={voucherCode ? "default" : "primary"}
+              size="small"
+              className={voucherCode ? "" : "bg-wastra-brown-600 hover:bg-wastra-brown-700"}
               onClick={() => {
                 const code = prompt('Masukkan kode voucher:')
-                if (code) setVoucherCode(code)
+                if (code) {
+                  setVoucherCode(code)
+                  message.success('Kode voucher berhasil diterapkan')
+                }
               }}
             >
-              Masukan Kode &gt;
+              {voucherCode ? 'Ubah Kode' : 'Masukkan Kode'}
             </Button>
           </div>
-          {voucherCode && (
-            <p className="text-sm text-wastra-brown-600 mt-2">
-              Kode: {voucherCode}
-            </p>
-          )}
         </Card>
 
         {/* Shipping Options */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-          <h2 className="text-base font-semibold text-wastra-brown-800 mb-4">
-            Opsi Pengiriman
-          </h2>
+        <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-wastra-brown-100">
+            <div className="w-10 h-10 bg-wastra-brown-100 rounded-lg flex items-center justify-center">
+              <ShoppingBagIcon className="w-5 h-5 text-wastra-brown-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-wastra-brown-800">
+                Opsi Pengiriman
+              </h2>
+              <p className="text-xs text-wastra-brown-500 mt-0.5">
+                Pilih metode pengiriman yang diinginkan
+              </p>
+            </div>
+          </div>
           <Radio.Group 
             value={shippingOption} 
             onChange={(e) => setShippingOption(e.target.value)}
@@ -476,23 +797,23 @@ const Checkout = () => {
           >
             <div className="space-y-3">
               <Radio value="reguler" className="w-full">
-                <div className="flex items-center justify-between w-full ml-2">
+                <div className="flex items-center justify-between w-full ml-3 p-3 rounded-lg hover:bg-wastra-brown-50 transition-colors">
                   <div>
-                    <span className="text-base font-medium text-wastra-brown-800">Reguler</span>
-                    <p className="text-sm text-wastra-brown-600">Tiba 14 - 20 Desember</p>
+                    <span className="text-base font-semibold text-wastra-brown-800 block">Reguler</span>
+                    <p className="text-sm text-wastra-brown-500 mt-0.5">Estimasi tiba 14-20 hari</p>
                   </div>
-                  <span className="text-base font-semibold text-wastra-brown-800">
+                  <span className="text-base font-bold text-wastra-brown-800">
                     {formatPrice(0)}
                   </span>
                 </div>
               </Radio>
               <Radio value="express" className="w-full">
-                <div className="flex items-center justify-between w-full ml-2">
+                <div className="flex items-center justify-between w-full ml-3 p-3 rounded-lg hover:bg-wastra-brown-50 transition-colors">
                   <div>
-                    <span className="text-base font-medium text-wastra-brown-800">Express</span>
-                    <p className="text-sm text-wastra-brown-600">Tiba 7 - 10 Desember</p>
+                    <span className="text-base font-semibold text-wastra-brown-800 block">Express</span>
+                    <p className="text-sm text-wastra-brown-500 mt-0.5">Estimasi tiba 7-10 hari</p>
                   </div>
-                  <span className="text-base font-semibold text-wastra-brown-800">
+                  <span className="text-base font-bold text-wastra-brown-800">
                     {formatPrice(50000)}
                   </span>
                 </div>
@@ -501,23 +822,22 @@ const Checkout = () => {
           </Radio.Group>
         </Card>
 
-        {/* Total Products */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-          <div className="flex items-center justify-between">
-            <span className="text-base font-medium text-wastra-brown-800">
-              Total {selectedItems.length} Produk
-            </span>
-            <span className="text-lg font-semibold text-wastra-brown-800">
-              {formatPrice(subtotal)}
-            </span>
-          </div>
-        </Card>
 
         {/* Payment Method */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-          <h2 className="text-base font-semibold text-wastra-brown-800 mb-4">
-            Metode Pembayaran
-          </h2>
+        <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center gap-3 mb-5 pb-4 border-b border-wastra-brown-100">
+            <div className="w-10 h-10 bg-wastra-brown-100 rounded-lg flex items-center justify-center">
+              <BuildingOfficeIcon className="w-5 h-5 text-wastra-brown-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-wastra-brown-800">
+                Metode Pembayaran
+              </h2>
+              <p className="text-xs text-wastra-brown-500 mt-0.5">
+                Pilih metode pembayaran yang diinginkan
+              </p>
+            </div>
+          </div>
           <Radio.Group 
             value={paymentMethod} 
             onChange={(e) => {
@@ -540,19 +860,27 @@ const Checkout = () => {
           >
             <div className="space-y-3">
               <Radio value="cod" className="w-full">
-                <span className="text-base font-medium text-wastra-brown-800 ml-2">COD</span>
+                <div className="flex items-center justify-between w-full ml-3 p-3 rounded-lg hover:bg-wastra-brown-50 transition-colors">
+                  <div>
+                    <span className="text-base font-semibold text-wastra-brown-800 block">Cash on Delivery (COD)</span>
+                    <p className="text-sm text-wastra-brown-500 mt-0.5">Bayar saat barang diterima</p>
+                  </div>
+                </div>
               </Radio>
               <Radio value="bank" className="w-full">
-                <div className="flex items-center justify-between w-full ml-2">
-                  <span className="text-base font-medium text-wastra-brown-800">Bank</span>
+                <div className="flex items-center justify-between w-full ml-3 p-3 rounded-lg hover:bg-wastra-brown-50 transition-colors">
+                  <div>
+                    <span className="text-base font-semibold text-wastra-brown-800 block">Transfer Bank</span>
+                    <p className="text-sm text-wastra-brown-500 mt-0.5">Transfer via Virtual Account</p>
+                  </div>
                   {selectedBank && virtualAccount && (
                     <Button
                       type="link"
                       size="small"
-                      className="text-wastra-brown-600 hover:text-wastra-brown-800 p-0 h-auto"
+                      className="text-wastra-brown-600 hover:text-wastra-brown-800 p-0 h-auto font-medium"
                       onClick={() => setIsPaymentModalVisible(true)}
                     >
-                      Lihat Detail &gt;
+                      Lihat Detail →
                     </Button>
                   )}
                 </div>
@@ -567,32 +895,34 @@ const Checkout = () => {
             if (!bank) return null
             
             return (
-              <div className="mt-4 p-4 bg-wastra-brown-50 border border-wastra-brown-200 rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{bank.logo}</span>
+              <div className="mt-4 p-5 bg-gradient-to-br from-blue-50 to-wastra-brown-50 border-2 border-blue-200 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm">
+                      {bank.logo}
+                    </div>
                     <div>
-                      <div className="text-base font-semibold text-wastra-brown-800">
+                      <div className="text-base font-bold text-wastra-brown-800">
                         {bank.name}
                       </div>
                       <div className="text-xs text-wastra-brown-500">Penjual: {selectedSeller}</div>
                     </div>
                   </div>
                   <Button
-                    type="link"
+                    type="text"
                     size="small"
-                    className="text-wastra-brown-600 hover:text-wastra-brown-800"
+                    className="text-wastra-brown-600 hover:text-wastra-brown-800 hover:bg-white"
                     onClick={() => setIsPaymentModalVisible(true)}
                   >
                     Ubah
                   </Button>
                 </div>
-                <div className="mt-2">
-                  <p className="text-sm text-wastra-brown-600">Virtual Account:</p>
-                  <p className="text-lg font-bold text-wastra-brown-800 font-mono">
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <p className="text-xs text-wastra-brown-500 mb-1">Virtual Account:</p>
+                  <p className="text-xl font-bold text-wastra-brown-800 font-mono tracking-wider">
                     {virtualAccount}
                   </p>
-                  <p className="text-xs text-wastra-brown-500 mt-1">Atas Nama: {bank.accountName}</p>
+                  <p className="text-xs text-wastra-brown-500 mt-2">Atas Nama: <span className="font-medium">{bank.accountName}</span></p>
                 </div>
               </div>
             )
@@ -600,32 +930,34 @@ const Checkout = () => {
         </Card>
 
         {/* Payment Details */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl shadow-sm">
-          <h2 className="text-base font-semibold text-wastra-brown-800 mb-4">
+        <Card className="mb-6 border-2 border-wastra-brown-300 rounded-xl shadow-lg bg-gradient-to-br from-white to-wastra-brown-50">
+          <h2 className="text-lg font-bold text-wastra-brown-800 mb-5 pb-4 border-b-2 border-wastra-brown-200">
             Rincian Pembayaran
           </h2>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-wastra-brown-600">Subtotal Pembayaran</span>
-              <span className="text-base font-medium text-wastra-brown-800">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-wastra-brown-600">Subtotal ({selectedItems.length} produk)</span>
+              <span className="text-base font-semibold text-wastra-brown-800">
                 {formatPrice(subtotal)}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-wastra-brown-600">Subtotal Pengiriman</span>
-              <span className="text-base font-medium text-wastra-brown-800">
+            <div className="flex items-center justify-between py-2">
+              <span className="text-sm text-wastra-brown-600">Ongkos Kirim</span>
+              <span className="text-base font-semibold text-wastra-brown-800">
                 {formatPrice(shippingCost)}
               </span>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-wastra-brown-600">Total Diskon</span>
-              <span className="text-base font-medium text-wastra-brown-800">
-                {formatPrice(discount)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between pt-3 border-t border-wastra-brown-100">
-              <span className="text-lg font-semibold text-wastra-brown-800">Total Pembayaran</span>
-              <span className="text-xl font-bold text-wastra-brown-800">
+            {discount > 0 && (
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-green-600">Diskon</span>
+                <span className="text-base font-semibold text-green-600">
+                  -{formatPrice(discount)}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-4 border-t-2 border-wastra-brown-200">
+              <span className="text-lg font-bold text-wastra-brown-800">Total Pembayaran</span>
+              <span className="text-2xl font-bold text-red-600">
                 {formatPrice(total)}
               </span>
             </div>
@@ -634,23 +966,23 @@ const Checkout = () => {
       </div>
 
       {/* Sticky Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-wastra-brown-200 shadow-lg z-50">
-        <div className="container mx-auto px-6 sm:px-8 md:px-12 lg:px-16 xl:px-20 max-w-6xl py-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-wastra-brown-200 shadow-2xl z-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex-1 w-full">
-              <p className="text-sm font-semibold text-wastra-brown-800 mb-1">Total Harga</p>
-              <p className="text-2xl font-bold text-red-600">
+            <div className="flex-1 w-full sm:w-auto">
+              <p className="text-xs text-wastra-brown-500 mb-1">Total Pembayaran</p>
+              <p className="text-2xl sm:text-3xl font-bold text-red-600">
                 {formatPrice(total)}
               </p>
             </div>
-            <div className="w-full sm:w-auto">
+            <div className="w-full sm:w-auto flex gap-3">
               <Button
                 size="large"
-                className="w-full sm:w-auto bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-12 px-12 rounded-lg font-bold text-base uppercase"
+                className="flex-1 sm:flex-none bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-12 px-8 sm:px-12 rounded-xl font-bold text-base shadow-lg hover:shadow-xl transition-all"
                 disabled={!address}
                 onClick={handleCheckout}
               >
-                Checkout
+                {!address ? 'Pilih Alamat Dulu' : 'Lanjutkan Pembayaran'}
               </Button>
             </div>
           </div>
@@ -1081,26 +1413,83 @@ const Checkout = () => {
                 <Form.Item
                   label="Upload Bukti Transfer"
                   name="proof"
-                  rules={[{ required: true, message: 'Upload bukti transfer' }]}
+                  rules={[
+                    { 
+                      required: true, 
+                      message: 'Upload bukti transfer' 
+                    },
+                    {
+                      validator: () => {
+                        if (!proofFile) {
+                          return Promise.reject(new Error('Upload bukti transfer'))
+                        }
+                        return Promise.resolve()
+                      }
+                    }
+                  ]}
                   extra="Format: JPG, PNG, atau PDF (Maks. 5MB)"
                 >
-                  <Input
-                    type="file"
-                    accept="image/*,.pdf"
-                    size="large"
-                    className="rounded-lg"
-                    onChange={(e) => {
-                      const file = e.target.files[0]
-                      if (file) {
-                        if (file.size > 5 * 1024 * 1024) {
-                          alert('Ukuran file maksimal 5MB')
-                          e.target.value = ''
-                          return
-                        }
-                        paymentForm.setFieldsValue({ proof: file })
+                  <Upload
+                    beforeUpload={(file) => {
+                      // Validasi file
+                      const isImage = file.type.startsWith('image/')
+                      const isPdf = file.type === 'application/pdf'
+                      
+                      if (!isImage && !isPdf) {
+                        message.error('Hanya file gambar (JPG, PNG) atau PDF yang diizinkan!')
+                        return Upload.LIST_ONLY
                       }
+                      
+                      const isLt5M = file.size / 1024 / 1024 < 5
+                      if (!isLt5M) {
+                        message.error('Ukuran file harus kurang dari 5MB!')
+                        return Upload.LIST_ONLY
+                      }
+                      
+                      // Simpan file ke state
+                      setProofFile(file)
+                      paymentForm.setFieldsValue({ proof: file })
+                      
+                      // Prevent auto upload
+                      return false
                     }}
-                  />
+                    onRemove={() => {
+                      setProofFile(null)
+                      paymentForm.setFieldsValue({ proof: null })
+                    }}
+                    maxCount={1}
+                    accept="image/*,.pdf"
+                  >
+                    <Button 
+                      icon={<PaperClipIcon className="w-4 h-4" />}
+                      className="rounded-lg"
+                    >
+                      Pilih File
+                    </Button>
+                  </Upload>
+                  {proofFile && (
+                    <div className="mt-2 p-3 bg-wastra-brown-50 rounded-lg border border-wastra-brown-200 flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <PaperClipIcon className="w-5 h-5 text-wastra-brown-600 flex-shrink-0" />
+                        <span className="text-sm text-wastra-brown-800 truncate">
+                          {proofFile.name}
+                        </span>
+                        <span className="text-xs text-wastra-brown-500 flex-shrink-0">
+                          ({(proofFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProofFile(null)
+                          paymentForm.setFieldsValue({ proof: null })
+                        }}
+                        className="ml-2 text-red-500 hover:text-red-700 flex-shrink-0"
+                      >
+                        <XMarkIcon className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
                 </Form.Item>
 
                 <Form.Item
@@ -1118,10 +1507,11 @@ const Checkout = () => {
 
             <Form.Item className="mb-0 mt-6">
               <div className="flex gap-3 justify-end">
-              <Button
+                <Button
                 onClick={() => {
                   setIsPaymentModalVisible(false)
                   setIsPaymentInstructionVisible(false)
+                  setProofFile(null)
                   // Hanya reset form, jangan hapus bank yang sudah dipilih
                   paymentForm.resetFields()
                 }}
