@@ -9,15 +9,35 @@ import {
   ShoppingBagIcon
 } from '@heroicons/react/24/outline'
 import { useRevealOnScroll } from '../utils/useRevealOnScroll'
+import endekImg from '../assets/endek.jpg'
+import songketImg from '../assets/songket.jpg'
 
 const LandingPage = () => {
   useRevealOnScroll()
 
   const categories = [
-    { id: 1, name: 'Kain Endek', count: 24, image: '/category-endek.jpg' },
-    { id: 2, name: 'Kain Songket', count: 18, image: '/category-songket.jpg' },
-    { id: 3, name: 'Tenun Tradisional', count: 15, image: '/category-tenun.jpg' },
-    { id: 4, name: 'Aksesoris', count: 12, image: '/category-aksesoris.jpg' },
+    {
+      id: 1,
+      name: 'Kain Endek',
+      count: 24,
+      image: endekImg,
+      overlayFrom: 'from-wastra-brown-700/70',
+      overlayVia: 'via-wastra-brown-600/35',
+      overlayTo: 'to-transparent',
+      textClass: 'text-wastra-brown-800',
+      subTextClass: 'text-wastra-brown-600',
+    },
+    {
+      id: 2,
+      name: 'Kain Songket',
+      count: 18,
+      image: songketImg,
+      overlayFrom: 'from-wastra-brown-600/60',
+      overlayVia: 'via-wastra-brown-500/30',
+      overlayTo: 'to-transparent',
+      textClass: 'text-wastra-brown-800',
+      subTextClass: 'text-wastra-brown-600',
+    },
   ]
 
   const featuredProducts = [
@@ -25,6 +45,7 @@ const LandingPage = () => {
     { id: 2, name: 'Kain Songket Emas Klasik', price: 850000, image: '/product-2.jpg' },
     { id: 3, name: 'Kain Endek Modern Pattern', price: 420000, image: '/product-3.jpg', discount: 8 },
     { id: 4, name: 'Kain Songket Tradisional Bali', price: 950000, image: '/product-4.jpg' },
+    { id: 5, name: 'Kain Endek Premium Warna Alam', price: 680000, image: '/product-5.jpg', discount: 6 },
   ]
 
   const formatPrice = (price) => {
@@ -39,7 +60,7 @@ const LandingPage = () => {
     <div className="w-full bg-white">
       {/* Hero Section - Clean & Minimalist */}
       <section className="bg-wastra-brown-50 py-20 reveal">
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-24 md:px-28 lg:px-32 xl:px-40 max-w-6xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <div className="space-y-4">
@@ -78,12 +99,36 @@ const LandingPage = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="bg-gradient-to-br from-wastra-brown-100 to-wastra-brown-200 rounded-2xl p-12 aspect-square flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <div className="w-32 h-32 bg-wastra-brown-300 rounded-full mx-auto flex items-center justify-center">
-                    <SparklesIcon className="w-16 h-16 text-wastra-brown-600" />
+              <div className="relative bg-gradient-to-br from-wastra-brown-50 to-wastra-brown-100 rounded-2xl p-8 aspect-square overflow-hidden shadow-lg">
+                {/* Main Fabric Image/Pattern - Visual Product Display */}
+                <div className="absolute inset-0">
+                  <div className="relative w-full h-full">
+                    {/* Primary Endek Pattern - Main Visual */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center bg-no-repeat rounded-xl"
+                      style={{ 
+                        backgroundImage: `url(${endekImg})`,
+                        backgroundSize: 'cover',
+                        filter: 'brightness(1.05) saturate(1.1)',
+                        transform: 'scale(1.1)',
+                        transformOrigin: 'center'
+                      }}
+                    />
+                    {/* Songket Pattern Overlay - Secondary Visual */}
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center bg-no-repeat rounded-xl opacity-40 mix-blend-overlay"
+                      style={{ 
+                        backgroundImage: `url(${songketImg})`,
+                        backgroundSize: 'cover',
+                        transform: 'scale(0.85) rotate(-8deg)',
+                        transformOrigin: 'center'
+                      }}
+                    />
+                    {/* Subtle Gradient Overlay for Depth */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-wastra-brown-50/10 to-wastra-brown-100/20 rounded-xl" />
+                    {/* Light vignette effect */}
+                    <div className="absolute inset-0 bg-gradient-radial from-transparent via-transparent to-wastra-brown-100/15 rounded-xl" />
                   </div>
-                  <p className="text-wastra-brown-700 text-sm">Koleksi Pilihan • Kualitas Terjaga</p>
                 </div>
               </div>
             </div>
@@ -93,7 +138,7 @@ const LandingPage = () => {
 
       {/* Shop By Category - Clean Cards */}
       <section className="py-16 bg-white reveal" style={{ '--reveal-delay': '60ms' }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-8 md:px-12">
           <div className="mb-8">
             <h2 className="text-3xl font-light text-wastra-brown-800">
               Beli Berdasarkan Kategori
@@ -103,23 +148,29 @@ const LandingPage = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-4 md:gap-6">
             {categories.map((category) => (
-              <Link key={category.id} to="/produk">
+              <Link
+                key={category.id}
+                to="/produk"
+                className="max-w-xs mx-auto w-full no-underline hover:no-underline"
+              >
                 <Card
                   hoverable
-                  className="border border-wastra-brown-100 rounded-xl overflow-hidden transition-all hover:shadow-lg"
+                  className="bg-white border border-wastra-brown-100 rounded-xl overflow-hidden transition-all hover:shadow-md shadow-sm"
                   cover={
-                    <div className="bg-wastra-brown-50 aspect-square flex items-center justify-center">
-                      <div className="w-20 h-20 bg-wastra-brown-200 rounded-full flex items-center justify-center">
-                        <SparklesIcon className="w-10 h-10 text-wastra-brown-500" />
-                      </div>
+                    <div className="relative h-48">
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url(${category.image})` }}
+                      />
+                      <div className={`absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t ${category.overlayFrom} ${category.overlayVia} ${category.overlayTo}`} />
                     </div>
                   }
                 >
-                  <div className="text-center py-2">
-                    <h3 className="font-medium text-wastra-brown-800 mb-1">{category.name}</h3>
-                    <p className="text-sm text-wastra-brown-500">{category.count} Produk</p>
+                  <div className="bg-white px-3 py-3 rounded-b-xl text-center">
+                    <h3 className={`font-semibold mb-1 ${category.textClass}`}>{category.name}</h3>
+                    <p className={`text-sm ${category.subTextClass}`}>{category.count} Produk</p>
                   </div>
                 </Card>
               </Link>
@@ -130,40 +181,47 @@ const LandingPage = () => {
 
       {/* Featured Products - Clean Grid */}
       <section className="py-16 bg-wastra-brown-50 reveal" style={{ '--reveal-delay': '80ms' }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-8 md:px-12">
           <div className="mb-8">
-            <h2 className="text-3xl font-light text-wastra-brown-800 mb-2">
+            <h2 className="text-3xl font-light text-wastra-brown-800">
               Produk Unggulan
             </h2>
-            <p className="text-wastra-brown-600">
+            <p className="text-wastra-brown-600 mt-2">
               Koleksi terpilih dari pengrajin terbaik
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="w-full overflow-hidden">
+            <div className="px-16 sm:px-20 md:px-24 lg:px-28 xl:px-32 2xl:px-40">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 justify-items-center">
             {featuredProducts.map((product) => (
-              <Link key={product.id} to={`/produk/${product.id}`}>
+              <Link
+                key={product.id}
+                to={`/produk/${product.id}`}
+                className="block no-underline hover:no-underline w-full"
+              >
                 <Card
                   hoverable
-                  className="bg-white border border-wastra-brown-100 rounded-xl overflow-hidden transition-all hover:shadow-lg"
+                  className="bg-white border border-wastra-brown-100 rounded-xl overflow-hidden transition-all hover:shadow-lg h-full flex flex-col w-full"
+                  bodyStyle={{ padding: '16px 16px 18px 16px' }}
                   cover={
-                    <div className="bg-wastra-brown-50 aspect-square flex items-center justify-center">
-                      <div className="w-24 h-24 bg-wastra-brown-200 rounded-lg flex items-center justify-center">
-                        <SparklesIcon className="w-12 h-12 text-wastra-brown-400" />
+                    <div className="bg-wastra-brown-50 h-40 flex items-center justify-center">
+                      <div className="w-20 h-20 bg-wastra-brown-200 rounded-lg flex items-center justify-center">
+                        <SparklesIcon className="w-10 h-10 text-wastra-brown-400" />
                       </div>
                     </div>
                   }
                 >
-                  <div className="py-3">
+                  <div className="py-2 flex flex-col gap-1.5 h-full">
                     {product.discount && (
-                      <span className="inline-block bg-red-100 text-red-600 text-xs font-medium px-2 py-1 rounded mb-2">
+                      <span className="inline-block bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full w-fit mb-1">
                         -{product.discount}% OFF
                       </span>
                     )}
-                    <h3 className="font-medium text-wastra-brown-800 mb-2 text-sm line-clamp-2 min-h-[2.5rem]">
+                    <h3 className="font-medium text-wastra-brown-800 text-sm leading-snug line-clamp-2 min-h-[2.25rem]">
                       {product.name}
                     </h3>
-                    <div className="flex items-center gap-2 mb-3">
+                    <div className="flex items-center gap-2">
                       <div className="flex">
                         {[1,2,3,4,5].map(i => (
                           <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
@@ -172,21 +230,24 @@ const LandingPage = () => {
                         ))}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold text-wastra-brown-800">
+                    <div className="mt-auto flex items-center justify-between pt-2">
+                      <p className="text-lg font-semibold text-wastra-brown-800 leading-tight">
                         {formatPrice(product.price)}
                       </p>
-                      <Button 
-                        size="small"
-                        className="bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none rounded-lg"
+                      <button
+                        type="button"
+                        className="w-10 h-10 bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white rounded-full flex items-center justify-center transition-colors"
+                        aria-label="Tambah ke keranjang"
                       >
-                        + Keranjang
-                      </Button>
+                        <ShoppingBagIcon className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </Card>
               </Link>
             ))}
+              </div>
+            </div>
           </div>
           <div className="mt-10 text-center">
             <Link to="/produk">
@@ -214,7 +275,7 @@ const LandingPage = () => {
               <div className="mt-6 flex items-center gap-3">
                 <UserGroupIcon className="w-5 h-5 text-wastra-brown-600" />
                 <p className="text-sm text-wastra-brown-600">
-                  Transparan • Produk asli pengrajin • Cerita dan edukasi budaya
+                  Produk asli pengrajin
                 </p>
               </div>
             </div>
@@ -231,7 +292,7 @@ const LandingPage = () => {
                 <div className="bg-white border border-wastra-brown-100 rounded-xl p-5 col-span-2">
                   <p className="text-xs text-wastra-brown-500">Fokus</p>
                   <p className="text-sm text-wastra-brown-700 mt-1">
-                    Endek • Songket • Tenun Tradisional Sidemen
+                    Endek • Songket
                   </p>
                 </div>
               </div>

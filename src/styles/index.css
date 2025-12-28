@@ -5,7 +5,7 @@
 /* Custom base styles - minimal to avoid conflicts with Ant Design */
 @layer base {
   body {
-    @apply font-sans antialiased;
+    @apply font-sans antialiased overflow-x-hidden;
   }
   html {
     scroll-behavior: smooth;
