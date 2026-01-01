@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Input, Dropdown, Avatar, Menu } from 'antd'
+import { Input, Dropdown, Avatar, Menu, message, Modal } from 'antd'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   BellIcon, 
   Bars3Icon, 
@@ -10,19 +11,24 @@ import {
   HeartIcon,
   ShoppingCartIcon,
   MapPinIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline'
 import { useUser } from '../contexts/UserContext'
 import { useCart } from '../contexts/CartContext'
+import { USER_ROLES } from '../utils/authRoles'
 
 const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
-  const { user, isAuthenticated, logout } = useUser()
+  const { user, isAuthenticated, logout, hasRole } = useUser()
   const { cartItems } = useCart()
   
-  const cartCount = cartItems.length
+  // Hanya tampilkan cart count jika user sudah login
+  const cartCount = isAuthenticated ? cartItems.length : 0
+  const isArtisan = hasRole(USER_ROLES.ARTISAN)
+  const isCustomer = hasRole(USER_ROLES.CUSTOMER)
 
   const handleSearch = () => {
     if (searchValue.trim()) {
@@ -95,19 +101,53 @@ const Header = () => {
 
             <div className="flex items-center gap-3 flex-shrink pr-8">
 
-              {/* ✅ NOTIFIKASI (INI YANG DIPERBAIKI) */}
-              <Link
-                to="/notifications"
+              {/* ✅ NOTIFIKASI */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    Modal.confirm({
+                      title: 'Login Diperlukan',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Silakan login terlebih dahulu untuk melihat notifikasi.',
+                      okText: 'Login',
+                      cancelText: 'Batal',
+                      okType: 'primary',
+                      onOk: () => {
+                        navigate(`/onboarding?redirect=${encodeURIComponent('/notifications')}`)
+                      },
+                    })
+                    return
+                  }
+                  navigate('/notifications')
+                }}
                 className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
                 aria-label="Notifikasi"
               >
                 <BellIcon className="w-5 h-5" />
-              </Link>
+              </button>
               
 
-              <Link
-                to="/keranjang"
-                className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative no-underline"
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    Modal.confirm({
+                      title: 'Login Diperlukan',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Silakan login terlebih dahulu untuk melihat keranjang.',
+                      okText: 'Login',
+                      cancelText: 'Batal',
+                      okType: 'primary',
+                      onOk: () => {
+                        navigate(`/onboarding?redirect=${encodeURIComponent('/keranjang')}`)
+                      },
+                    })
+                    return
+                  }
+                  navigate('/keranjang')
+                }}
+                className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative"
               >
                 <ShoppingBagIcon className="w-5 h-5" />
                 {cartCount > 0 && (
@@ -115,36 +155,67 @@ const Header = () => {
                     {cartCount}
                   </span>
                 )}
-              </Link>
+              </button>
 
               {isAuthenticated ? (
                 <Dropdown
                   overlay={
                     <Menu>
-                      <Menu.Item key="profile" onClick={() => navigate('/profil')}>
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="w-4 h-4" />
-                          <span>Profil Saya</span>
-                        </div>
-                      </Menu.Item>
-                      <Menu.Item key="orders" onClick={() => navigate('/pesanan')}>
-                        <div className="flex items-center gap-2">
-                          <ShoppingCartIcon className="w-4 h-4" />
-                          <span>Pesanan Saya</span>
-                        </div>
-                      </Menu.Item>
-                      <Menu.Item key="wishlist" onClick={() => navigate('/wishlist')}>
-                        <div className="flex items-center gap-2">
-                          <HeartIcon className="w-4 h-4" />
-                          <span>Wishlist</span>
-                        </div>
-                      </Menu.Item>
-                      <Menu.Item key="addresses" onClick={() => navigate('/alamat')}>
-                        <div className="flex items-center gap-2">
-                          <MapPinIcon className="w-4 h-4" />
-                          <span>Alamat Saya</span>
-                        </div>
-                      </Menu.Item>
+                      {isArtisan ? (
+                        <>
+                          <Menu.Item key="dashboard" onClick={() => navigate('/pengrajin')}>
+                            <div className="flex items-center gap-2">
+                              <ChartBarIcon className="w-4 h-4" />
+                              <span>Dashboard</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="products" onClick={() => navigate('/pengrajin/produk')}>
+                            <div className="flex items-center gap-2">
+                              <ShoppingBagIcon className="w-4 h-4" />
+                              <span>Kelola Produk</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="orders" onClick={() => navigate('/pengrajin/pesanan')}>
+                            <div className="flex items-center gap-2">
+                              <ShoppingCartIcon className="w-4 h-4" />
+                              <span>Pesanan Masuk</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="profile" onClick={() => navigate('/pengrajin/profil')}>
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="w-4 h-4" />
+                              <span>Profil Pengrajin</span>
+                            </div>
+                          </Menu.Item>
+                        </>
+                      ) : (
+                        <>
+                          <Menu.Item key="profile" onClick={() => navigate('/profil')}>
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="w-4 h-4" />
+                              <span>Profil Saya</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="orders" onClick={() => navigate('/pesanan')}>
+                            <div className="flex items-center gap-2">
+                              <ShoppingCartIcon className="w-4 h-4" />
+                              <span>Pesanan Saya</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="wishlist" onClick={() => navigate('/wishlist')}>
+                            <div className="flex items-center gap-2">
+                              <HeartIcon className="w-4 h-4" />
+                              <span>Wishlist</span>
+                            </div>
+                          </Menu.Item>
+                          <Menu.Item key="addresses" onClick={() => navigate('/alamat')}>
+                            <div className="flex items-center gap-2">
+                              <MapPinIcon className="w-4 h-4" />
+                              <span>Alamat Saya</span>
+                            </div>
+                          </Menu.Item>
+                        </>
+                      )}
                       <Menu.Divider />
                       <Menu.Item 
                         key="logout" 

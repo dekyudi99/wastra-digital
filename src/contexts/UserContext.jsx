@@ -131,13 +131,16 @@ export const UserProvider = ({ children }) => {
 
   // Address functions
   const addAddress = (addressData) => {
-    const newAddress = {
-      ...addressData,
-      id: Date.now(),
-      isDefault: addresses.length === 0, // First address is default
-      createdAt: new Date().toISOString(),
-    }
-    setAddresses(prev => [...prev, newAddress])
+    let newAddress
+    setAddresses(prev => {
+      newAddress = {
+        ...addressData,
+        id: Date.now(),
+        isDefault: prev.length === 0, // First address is default
+        createdAt: new Date().toISOString(),
+      }
+      return [...prev, newAddress]
+    })
     return newAddress
   }
 

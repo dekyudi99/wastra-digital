@@ -13,8 +13,17 @@ const roleOptions = [
 const LoginPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { login } = useUser()
+  const { login, isAuthenticated } = useUser()
   const [loading, setLoading] = useState(false)
+
+  // Get redirect URL from query params
+  const redirectUrl = params.get('redirect') || '/produk'
+
+  // If already authenticated, redirect to intended page or home
+  if (isAuthenticated) {
+    navigate(redirectUrl, { replace: true })
+    return null
+  }
 
   const role = useMemo(() => {
     const fromQuery = params.get('role')
@@ -37,10 +46,13 @@ const LoginPage = () => {
       
       message.success('Berhasil masuk')
       
+      // Redirect to intended page or default based on role
       if (values.role === USER_ROLES.ADMIN) {
         navigate('/admin')
+      } else if (values.role === USER_ROLES.ARTISAN) {
+        navigate('/pengrajin')
       } else {
-        navigate('/produk')
+        navigate(redirectUrl)
       }
     } catch (error) {
       message.error('Gagal masuk. Silakan coba lagi.')

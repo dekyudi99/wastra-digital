@@ -38,22 +38,39 @@ const Checkout = () => {
   const [selectedDistrict, setSelectedDistrict] = useState(null)
   const [mapLocation, setMapLocation] = useState({ lat: -8.4095, lng: 115.1889 }) // Default: Bali
 
-  // Load default address on mount and when addresses change
+  // Load default address on mount only
   useEffect(() => {
-    const defaultAddr = getDefaultAddress()
-    if (defaultAddr) {
-      // Jika alamat yang sedang dipilih masih ada di daftar, update. Jika tidak, gunakan default
-      if (address && address.id && addresses.find(addr => addr.id === address.id)) {
-        const updatedAddr = addresses.find(addr => addr.id === address.id)
-        setAddress(updatedAddr)
-      } else if (defaultAddr) {
+    // Hanya set default address saat pertama kali mount jika belum ada address yang dipilih
+    if (!address && addresses.length > 0) {
+      const defaultAddr = getDefaultAddress()
+      if (defaultAddr) {
         setAddress(defaultAddr)
+      } else {
+        // Jika tidak ada default, gunakan alamat pertama
+        setAddress(addresses[0])
       }
-    } else if (addresses.length > 0 && !address) {
-      // Jika tidak ada default tapi ada alamat, gunakan alamat pertama
-      setAddress(addresses[0])
     }
-  }, [addresses, getDefaultAddress])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run on mount
+
+  // Update address jika address yang dipilih dihapus dari addresses
+  // Hanya update jika address yang dipilih benar-benar tidak ada lagi (dihapus)
+  useEffect(() => {
+    if (address && address.id && addresses.length > 0) {
+      const addressStillExists = addresses.find(addr => addr.id === address.id)
+      if (!addressStillExists) {
+        // Hanya update jika address yang dipilih benar-benar tidak ada lagi (dihapus)
+        // Jangan update jika address baru saja ditambahkan (akan di-handle di handleAddressSubmit)
+        const defaultAddr = getDefaultAddress()
+        if (defaultAddr) {
+          setAddress(defaultAddr)
+        } else if (addresses.length > 0) {
+          setAddress(addresses[0])
+        }
+      }
+      // Jangan update address jika masih ada, biarkan user memilih sendiri
+    }
+  }, [addresses, address, getDefaultAddress])
 
   // Generate Virtual Account Number
   const generateVirtualAccount = (bankId, sellerName) => {
@@ -178,6 +195,8 @@ const Checkout = () => {
     } else {
       // Add new address
       const savedAddress = addAddress(addressData)
+      // Set address yang baru ditambahkan sebagai address yang dipilih
+      // savedAddress sudah berisi semua data yang diperlukan, langsung set
       setAddress(savedAddress)
       message.success('Alamat berhasil ditambahkan')
     }

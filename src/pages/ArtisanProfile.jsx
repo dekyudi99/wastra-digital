@@ -1,298 +1,293 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Card, Row, Col, Tag, Statistic, Divider, Button, Empty } from 'antd'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Card, Form, Input, Button, Upload, Avatar, message, Tabs } from 'antd'
 import { 
-  UserIcon,
-  MapPinIcon,
-  PhoneIcon,
-  EnvelopeIcon,
+  UserIcon, 
+  CameraIcon,
   ArrowLeftIcon,
-  ChatBubbleLeftRightIcon
+  LockClosedIcon
 } from '@heroicons/react/24/outline'
-import { formatPrice } from '../utils/format'
+import { useUser } from '../contexts/UserContext'
+import { ROLE_LABELS_ID } from '../utils/authRoles'
 
-// Mock data artisan - akan diganti dengan data dari API nanti
-const ARTISANS_DATA = {
-  1: {
-    id: 1,
-    name: 'Ibu Made Sari',
-    location: 'Desa Sidemen, Karangasem, Bali',
-    phone: '+62 812-3456-7890',
-    email: 'made.sari@example.com',
-    bio: `
-      Saya adalah pengrajin kain tradisional yang telah menekuni 
-      kerajinan tenun endek selama lebih dari 20 tahun. Kain-kain 
-      yang saya buat menggunakan teknik tradisional yang diwariskan 
-      turun-temurun dari nenek moyang.
-      
-      Setiap helai kain dibuat dengan penuh dedikasi dan cinta, 
-      mempertahankan kualitas dan keindahan motif tradisional Bali. 
-      Saya berharap melalui platform ini, lebih banyak orang dapat 
-      mengenal dan menghargai warisan budaya kami.
-    `,
-    specialties: ['Endek', 'Songket', 'Tenun Tradisional'],
-    experience: '20+ tahun',
-    productsCount: 12,
-    rating: 4.8,
-  },
-  2: {
-    id: 2,
-    name: 'Pelangi Weaving',
-    location: 'Desa Sidemen, Karangasem, Bali',
-    phone: '+62 812-3456-7891',
-    email: 'pelangi.weaving@example.com',
-    bio: `
-      Pelangi Weaving adalah workshop tenun tradisional yang didirikan 
-      oleh sekelompok pengrajin berpengalaman. Kami mengkhususkan diri 
-      dalam pembuatan kain songket dengan motif klasik dan modern.
-      
-      Dengan lebih dari 15 tahun pengalaman, kami telah menghasilkan 
-      ribuan helai kain berkualitas tinggi yang digunakan untuk berbagai 
-      keperluan adat dan modern.
-    `,
-    specialties: ['Songket', 'Tenun Modern', 'Kain Adat'],
-    experience: '15+ tahun',
-    productsCount: 18,
-    rating: 4.9,
-  },
-  3: {
-    id: 3,
-    name: 'Ibu Wayan Sari',
-    location: 'Desa Sidemen, Karangasem, Bali',
-    phone: '+62 812-3456-7892',
-    email: 'wayan.sari@example.com',
-    bio: `
-      Sebagai pengrajin generasi ketiga, saya mewarisi keahlian tenun 
-      dari nenek dan ibu saya. Spesialisasi saya adalah kain endek dengan 
-      motif tradisional yang autentik.
-      
-      Setiap produk yang saya buat adalah hasil dari dedikasi dan 
-      ketelitian tinggi, memastikan kualitas yang terbaik untuk 
-      pelanggan saya.
-    `,
-    specialties: ['Endek Tradisional', 'Kain Adat'],
-    experience: '25+ tahun',
-    productsCount: 10,
-    rating: 4.7,
-  },
-  4: {
-    id: 4,
-    name: 'Ibu Ketut Sari',
-    location: 'Desa Sidemen, Karangasem, Bali',
-    phone: '+62 812-3456-7893',
-    email: 'ketut.sari@example.com',
-    bio: `
-      Pengrajin yang fokus pada pembuatan kain endek dengan teknik 
-      tradisional yang telah diwariskan turun-temurun. Saya sangat 
-      memperhatikan detail dan kualitas dalam setiap helai kain yang 
-      saya produksi.
-    `,
-    specialties: ['Endek', 'Tenun Tradisional'],
-    experience: '18+ tahun',
-    productsCount: 8,
-    rating: 4.6,
-  },
-}
+const { TabPane } = Tabs
 
 const ArtisanProfile = () => {
-  const { id } = useParams()
   const navigate = useNavigate()
-  const artisanId = parseInt(id)
+  const { user, updateUser, updateAvatar, logout } = useUser()
+  const [form] = Form.useForm()
+  const [passwordForm] = Form.useForm()
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('profile')
 
-  // Get artisan data based on ID
-  const artisan = ARTISANS_DATA[artisanId]
-
-  // If artisan not found, show error
-  if (!artisan) {
-    return (
-      <div className="min-h-screen bg-wastra-brown-50 py-12">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
-          <Button 
-            type="text" 
-            icon={<ArrowLeftIcon className="w-5 h-5" />}
-            onClick={() => navigate('/produk')}
-            className="mb-6"
-          >
-            Kembali ke Katalog
-          </Button>
-          <Card>
-            <Empty
-              description={
-                <div>
-                  <p className="text-lg text-wastra-brown-600 mb-2">
-                    Pengrajin tidak ditemukan
-                  </p>
-                  <p className="text-wastra-brown-500">
-                    ID pengrajin yang Anda cari tidak tersedia.
-                  </p>
-                </div>
-              }
-            >
-              <Button 
-                type="primary"
-                onClick={() => navigate('/produk')}
-                className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-              >
-                Kembali ke Katalog Produk
-              </Button>
-            </Empty>
-          </Card>
-        </div>
-      </div>
-    )
+  if (!user) {
+    navigate('/masuk')
+    return null
   }
 
-  // Mock products for this artisan - akan diganti dengan data dari API nanti
-  // Filter products based on artisan ID
-  const getArtisanProducts = () => {
-    // This is mock data - in real app, fetch from API based on artisanId
-    const allProducts = [
-      { id: 1, name: 'Kain Endek Sidemen Motif Geometris', price: 350000, artisanId: 1 },
-      { id: 2, name: 'Kain Songket Emas Klasik', price: 850000, artisanId: 2 },
-      { id: 3, name: 'Kain Endek Modern Pattern', price: 420000, artisanId: 1 },
-      { id: 4, name: 'Kain Songket Tradisional Bali', price: 950000, artisanId: 2 },
-      { id: 5, name: 'Kain Endek Premium Warna Alam', price: 680000, artisanId: 3 },
-      { id: 6, name: 'Kain Endek Motif Bunga', price: 450000, artisanId: 1 },
-      { id: 7, name: 'Kain Songket Emas Premium', price: 1200000, artisanId: 2 },
-      { id: 8, name: 'Kain Endek Klasik', price: 380000, artisanId: 4 },
-    ]
-    return allProducts.filter(p => p.artisanId === artisanId)
+  // Handle avatar upload
+  const handleAvatarChange = (info) => {
+    const { file } = info
+    
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64String = e.target.result
+        updateAvatar(base64String)
+        message.success('Foto profil berhasil diubah')
+      }
+      reader.onerror = () => {
+        message.error('Gagal membaca file')
+      }
+      reader.readAsDataURL(file.originFileObj || file)
+    }
   }
 
-  const products = getArtisanProducts()
+  // Handle profile update
+  const handleProfileUpdate = async (values) => {
+    setLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      // Pastikan role tidak berubah saat update profil
+      updateUser({
+        ...values,
+        role: user.role, // Pertahankan role yang sudah ada
+      })
+      message.success('Profil berhasil diperbarui')
+    } catch (error) {
+      message.error('Gagal memperbarui profil')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Handle password change
+  const handlePasswordChange = async (values) => {
+    setLoading(true)
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      message.success('Kata sandi berhasil diubah')
+      passwordForm.resetFields()
+    } catch (error) {
+      message.error('Gagal mengubah kata sandi')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const uploadProps = {
+    name: 'avatar',
+    listType: 'picture-circle',
+    showUploadList: false,
+    beforeUpload: (file) => {
+      const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
+      if (!isJpgOrPng) {
+        message.error('Hanya file JPG/PNG yang diizinkan!')
+        return Upload.LIST_IGNORE
+      }
+      const isLt2M = file.size / 1024 / 1024 < 2
+      if (!isLt2M) {
+        message.error('Ukuran gambar harus kurang dari 2MB!')
+        return Upload.LIST_IGNORE
+      }
+      return false
+    },
+    onChange: handleAvatarChange,
+    customRequest: () => {},
+  }
 
   return (
-    <div className="min-h-screen bg-wastra-brown-50 py-8">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
-        <Button 
-          type="text" 
-          icon={<ArrowLeftIcon className="w-5 h-5" />}
-          onClick={() => navigate(-1)}
-          className="mb-6 text-wastra-brown-600 hover:text-wastra-brown-800"
-        >
-          Kembali
-        </Button>
+    <div className="bg-wastra-brown-50 min-h-screen py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+        {/* Header */}
+        <div className="mb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-wastra-brown-600 hover:text-wastra-brown-800 mb-4"
+          >
+            <ArrowLeftIcon className="w-5 h-5" />
+            <span>Kembali</span>
+          </button>
+          <h1 className="text-3xl font-semibold text-wastra-brown-800">Profil Pengrajin</h1>
+          <p className="text-wastra-brown-600 mt-2">
+            Kelola informasi profil pengrajin Anda
+          </p>
+        </div>
 
-        <Row gutter={[24, 24]}>
-          {/* Profile Section */}
-          <Col xs={24} md={8}>
-            <Card className="border border-wastra-brown-200 rounded-xl shadow-sm">
-              <div className="text-center mb-6">
-                <div className="w-32 h-32 bg-gradient-to-br from-wastra-brown-100 to-wastra-brown-200 rounded-full mx-auto mb-4 flex items-center justify-center shadow-md">
-                  <UserIcon className="w-16 h-16 text-wastra-brown-600" />
-                </div>
-                <h1 className="text-2xl font-bold mb-2 text-wastra-brown-800">{artisan.name}</h1>
-                <p className="text-wastra-brown-600 mb-4">{artisan.experience} Pengalaman</p>
-                <div className="flex flex-wrap gap-2 justify-center mb-4">
-                  {artisan.specialties.map((specialty, idx) => (
-                    <Tag key={idx} color="blue" className="rounded-full">{specialty}</Tag>
-                  ))}
-                </div>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} className="bg-white rounded-lg p-6">
+          {/* Profile Tab */}
+          <TabPane tab="Profil" key="profile">
+            <Card className="border-0 shadow-none">
+              <div className="text-center mb-8">
+                <Upload {...uploadProps}>
+                  <div className="relative inline-block">
+                    <Avatar
+                      size={120}
+                      src={user.avatar}
+                      icon={!user.avatar && <UserIcon className="w-12 h-12" />}
+                      className="border-4 border-wastra-brown-200"
+                    />
+                    <div className="absolute bottom-0 right-0 bg-wastra-brown-600 rounded-full p-2 cursor-pointer hover:bg-wastra-brown-700 transition-colors">
+                      <CameraIcon className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </Upload>
+                <p className="text-sm text-wastra-brown-600 mt-4">
+                  Klik untuk mengubah foto profil
+                </p>
               </div>
 
-              <Divider className="my-4" />
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <MapPinIcon className="w-5 h-5 text-wastra-brown-500 flex-shrink-0" />
-                  <span className="text-wastra-brown-700 text-sm">{artisan.location}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <PhoneIcon className="w-5 h-5 text-wastra-brown-500 flex-shrink-0" />
-                  <span className="text-wastra-brown-700 text-sm">{artisan.phone}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <EnvelopeIcon className="w-5 h-5 text-wastra-brown-500 flex-shrink-0" />
-                  <span className="text-wastra-brown-700 text-sm break-all">{artisan.email}</span>
-                </div>
-              </div>
-
-              <Divider className="my-4" />
-
-              <Button
-                type="primary"
-                icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
-                onClick={() => navigate(`/chat/${artisan.id}`)}
-                className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-11 mb-4"
-                size="large"
+              <Form
+                form={form}
+                layout="vertical"
+                initialValues={{
+                  name: user.name || '',
+                  email: user.email || '',
+                  phone: user.phone || '',
+                  role: ROLE_LABELS_ID[user.role] || '',
+                }}
+                onFinish={handleProfileUpdate}
               >
-                Chat dengan Pengrajin
-              </Button>
+                <Form.Item
+                  name="name"
+                  label="Nama Pengrajin"
+                  rules={[{ required: true, message: 'Masukkan nama pengrajin' }]}
+                >
+                  <Input size="large" placeholder="Nama pengrajin Anda" />
+                </Form.Item>
 
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Statistic 
-                    title="Produk" 
-                    value={products.length || artisan.productsCount} 
-                    valueStyle={{ fontSize: '24px', color: '#8B4513' }}
-                  />
-                </Col>
-                <Col span={12}>
-                  <Statistic 
-                    title="Rating" 
-                    value={artisan.rating} 
-                    precision={1}
-                    valueStyle={{ fontSize: '24px', color: '#8B4513' }}
-                  />
-                </Col>
-              </Row>
-            </Card>
-          </Col>
+                <Form.Item
+                  name="email"
+                  label="Email"
+                  rules={[
+                    { required: true, message: 'Masukkan email' },
+                    { type: 'email', message: 'Format email tidak valid' },
+                  ]}
+                >
+                  <Input size="large" placeholder="nama@email.com" disabled />
+                </Form.Item>
 
-          {/* Bio & Products */}
-          <Col xs={24} md={16}>
-            <Card 
-              title={<span className="text-wastra-brown-800 font-semibold">Tentang Pengrajin</span>} 
-              className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm"
-            >
-              <p className="text-wastra-brown-700 whitespace-pre-line leading-relaxed">
-                {artisan.bio}
-              </p>
-            </Card>
+                <Form.Item
+                  name="phone"
+                  label="Nomor Telepon"
+                  rules={[
+                    { required: true, message: 'Masukkan nomor telepon' },
+                    { pattern: /^[0-9+\-\s()]+$/, message: 'Format nomor telepon tidak valid' },
+                  ]}
+                >
+                  <Input size="large" placeholder="+62 812-3456-7890" />
+                </Form.Item>
 
-            <Card 
-              title={<span className="text-wastra-brown-800 font-semibold">Produk dari Pengrajin Ini ({products.length})</span>}
-              className="border border-wastra-brown-200 rounded-xl shadow-sm"
-            >
-              {products.length > 0 ? (
-                <Row gutter={[16, 16]}>
-                  {products.map((product) => (
-                    <Col xs={24} sm={12} key={product.id}>
-                      <Link to={`/produk/${product.id}`} className="block h-full">
-                        <Card
-                          hoverable
-                          className="h-full border border-wastra-brown-100 rounded-lg transition-all hover:shadow-md"
-                          cover={
-                            <div className="h-48 bg-gradient-to-br from-wastra-brown-50 to-wastra-brown-100 flex items-center justify-center">
-                              <span className="text-wastra-brown-400 text-sm text-center px-4">
-                                {product.name}
-                              </span>
-                            </div>
-                          }
-                        >
-                          <h3 className="font-semibold mb-2 line-clamp-2 text-wastra-brown-800">
-                            {product.name}
-                          </h3>
-                          <p className="text-lg font-bold text-red-600">
-                            {formatPrice(product.price)}
-                          </p>
-                        </Card>
-                      </Link>
-                    </Col>
-                  ))}
-                </Row>
-              ) : (
-                <Empty 
-                  description="Belum ada produk dari pengrajin ini"
-                  className="py-8"
-                />
-              )}
+                <Form.Item name="role" label="Peran">
+                  <Input size="large" disabled />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    size="large"
+                    loading={loading}
+                    className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
+                  >
+                    Simpan Perubahan
+                  </Button>
+                </Form.Item>
+              </Form>
             </Card>
-          </Col>
-        </Row>
+          </TabPane>
+
+          {/* Change Password Tab */}
+          <TabPane tab="Ubah Kata Sandi" key="password">
+            <Card className="border-0 shadow-none">
+              <div className="mb-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <LockClosedIcon className="w-6 h-6 text-wastra-brown-600" />
+                  <h3 className="text-xl font-semibold text-wastra-brown-800">
+                    Ubah Kata Sandi
+                  </h3>
+                </div>
+                <p className="text-wastra-brown-600">
+                  Pastikan kata sandi baru Anda kuat dan mudah diingat
+                </p>
+              </div>
+
+              <Form
+                form={passwordForm}
+                layout="vertical"
+                onFinish={handlePasswordChange}
+              >
+                <Form.Item
+                  name="currentPassword"
+                  label="Kata Sandi Saat Ini"
+                  rules={[{ required: true, message: 'Masukkan kata sandi saat ini' }]}
+                >
+                  <Input.Password size="large" placeholder="••••••••" />
+                </Form.Item>
+
+                <Form.Item
+                  name="newPassword"
+                  label="Kata Sandi Baru"
+                  rules={[
+                    { required: true, message: 'Masukkan kata sandi baru' },
+                    { min: 8, message: 'Kata sandi minimal 8 karakter' },
+                  ]}
+                >
+                  <Input.Password size="large" placeholder="Minimal 8 karakter" />
+                </Form.Item>
+
+                <Form.Item
+                  name="confirmPassword"
+                  label="Konfirmasi Kata Sandi Baru"
+                  dependencies={['newPassword']}
+                  rules={[
+                    { required: true, message: 'Konfirmasi kata sandi baru' },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue('newPassword') === value) {
+                          return Promise.resolve()
+                        }
+                        return Promise.reject(new Error('Kata sandi tidak sama'))
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password size="large" placeholder="Ulangi kata sandi baru" />
+                </Form.Item>
+
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    size="large"
+                    loading={loading}
+                    className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
+                  >
+                    Ubah Kata Sandi
+                  </Button>
+                </Form.Item>
+              </Form>
+            </Card>
+          </TabPane>
+        </Tabs>
+
+        {/* Logout Button */}
+        <div className="mt-6 text-center">
+          <Button
+            danger
+            size="large"
+            onClick={() => {
+              logout()
+              navigate('/')
+              message.success('Anda telah keluar')
+            }}
+          >
+            Keluar
+          </Button>
+        </div>
       </div>
     </div>
   )
 }
 
 export default ArtisanProfile
-

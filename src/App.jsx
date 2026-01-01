@@ -2,6 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { CartProvider } from './contexts/CartContext'
 import { UserProvider } from './contexts/UserContext'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
+import { USER_ROLES } from './utils/authRoles'
 
 import LandingPage from './pages/LandingPage'
 import ProductCatalog from './pages/ProductCatalog'
@@ -21,6 +23,10 @@ import OrderHistory from './pages/OrderHistory'
 import AddressManagement from './pages/AddressManagement'
 import Wishlist from './pages/Wishlist'
 import ForgotPassword from './pages/ForgotPassword'
+import ArtisanDashboard from './pages/ArtisanDashboard'
+import ArtisanProducts from './pages/ArtisanProducts'
+import ArtisanOrders from './pages/ArtisanOrders'
+import ArtisanProfilePage from './pages/ArtisanProfile'
 
 
 
@@ -35,26 +41,156 @@ function App() {
               <Route path="/produk" element={<ProductCatalog />} />
               <Route path="/produk/:id" element={<ProductDetail />} />
               <Route path="/artisan/:id" element={<ArtisanProfile />} />
-              <Route path="/admin" element={<AdminDashboard />} />
+              <Route 
+                path="/admin" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ADMIN}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
               <Route path="/onboarding" element={<AuthOnboarding />} />
               <Route path="/masuk" element={<LoginPage />} />
               <Route path="/daftar" element={<RegisterPage />} />
               <Route path="/lupa-password" element={<ForgotPassword />} />
-              <Route path="/keranjang" element={<Cart />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/order-success" element={<OrderSuccess />} />
+              
+              {/* Protected Routes - Require Login */}
+              <Route 
+                path="/keranjang" 
+                element={
+                  <ProtectedRoute>
+                    <Cart />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/checkout" 
+                element={
+                  <ProtectedRoute>
+                    <Checkout />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/order-success" 
+                element={
+                  <ProtectedRoute>
+                    <OrderSuccess />
+                  </ProtectedRoute>
+                } 
+              />
 
-              {/* User Management Routes */}
-              <Route path="/profil" element={<UserProfile />} />
-              <Route path="/pesanan" element={<OrderHistory />} />
-              <Route path="/alamat" element={<AddressManagement />} />
-              <Route path="/wishlist" element={<Wishlist />} />
+              {/* User Management Routes - Require Login */}
+              <Route 
+                path="/profil" 
+                element={
+                  <ProtectedRoute>
+                    <UserProfile />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pesanan" 
+                element={
+                  <ProtectedRoute>
+                    <OrderHistory />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/alamat" 
+                element={
+                  <ProtectedRoute>
+                    <AddressManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/wishlist" 
+                element={
+                  <ProtectedRoute>
+                    <Wishlist />
+                  </ProtectedRoute>
+                } 
+              />
 
-              {/* ✅ NOTIFIKASI */}
-              <Route path="/notifications" element={<Notifications />} />
+              {/* ✅ NOTIFIKASI - Require Login */}
+              <Route 
+                path="/notifications" 
+                element={
+                  <ProtectedRoute>
+                    <Notifications />
+                  </ProtectedRoute>
+                } 
+              />
 
-              {/* ✅ CHAT DETAIL */}
-              <Route path="/chat/:sellerId" element={<ChatDetail />} />
+              {/* ✅ CHAT DETAIL - Require Login */}
+              <Route 
+                path="/chat/:sellerId" 
+                element={
+                  <ProtectedRoute>
+                    <ChatDetail />
+                  </ProtectedRoute>
+                } 
+              />
+
+              {/* ✅ PENGRAJIN ROUTES - Require Login & Artisan Role */}
+              <Route 
+                path="/pengrajin" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/produk" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanProducts />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/produk/tambah" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanProducts />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/produk/:id" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanProducts />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/pesanan" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanOrders />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/pesanan/:id" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanOrders />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/pengrajin/profil" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
+                    <ArtisanProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
             </Routes>
           </Layout>
         </CartProvider>

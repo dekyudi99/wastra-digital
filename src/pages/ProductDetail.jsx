@@ -1,6 +1,7 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { Button, Card, Row, Col, Tag, Descriptions, Divider, Avatar, Rate, Modal, message } from 'antd'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   ShoppingCartIcon,
   UserIcon,
@@ -19,7 +20,7 @@ const ProductDetail = () => {
   const navigate = useNavigate()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isImageModalVisible, setIsImageModalVisible] = useState(false)
-  const { toggleWishlist, isInWishlist } = useUser()
+  const { toggleWishlist, isInWishlist, isAuthenticated } = useUser()
   const { cartItems, setCartItems } = useCart()
 
   // Mock data - akan diganti dengan data dari API nanti
@@ -181,7 +182,23 @@ const ProductDetail = () => {
                 <Button
                   type="default"
                   icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
-                  onClick={() => navigate(`/chat/${product.artisan.id}?productId=${product.id}`)}
+                  onClick={() => {
+                    if (!isAuthenticated) {
+                      Modal.confirm({
+                        title: 'Login Diperlukan',
+                        icon: <ExclamationCircleOutlined />,
+                        content: 'Silakan login terlebih dahulu untuk chat dengan penjual.',
+                        okText: 'Login',
+                        cancelText: 'Batal',
+                        okType: 'primary',
+                        onOk: () => {
+                          navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                        },
+                      })
+                      return
+                    }
+                    navigate(`/chat/${product.artisan.id}?productId=${product.id}`)
+                  }}
                   className="border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400"
                 >
                   Chat Penjual
@@ -213,6 +230,21 @@ const ProductDetail = () => {
                 icon={<ShoppingCartIcon className="w-5 h-5" />}
                 className="flex-1 bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-12"
                 onClick={() => {
+                  if (!isAuthenticated) {
+                    Modal.confirm({
+                      title: 'Login Diperlukan',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+                      okText: 'Login',
+                      cancelText: 'Batal',
+                      okType: 'primary',
+                      onOk: () => {
+                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                      },
+                    })
+                    return
+                  }
+                  
                   const existingItem = cartItems.find(item => item.id === product.id)
                   if (existingItem) {
                     setCartItems(cartItems.map(item =>
@@ -245,6 +277,21 @@ const ProductDetail = () => {
                 icon={<HeartIcon className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />}
                 className={`h-12 ${isInWishlist(product.id) ? 'border-red-500 text-red-500' : ''}`}
                 onClick={() => {
+                  if (!isAuthenticated) {
+                    Modal.confirm({
+                      title: 'Login Diperlukan',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Silakan login terlebih dahulu untuk menambahkan produk ke wishlist.',
+                      okText: 'Login',
+                      cancelText: 'Batal',
+                      okType: 'primary',
+                      onOk: () => {
+                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                      },
+                    })
+                    return
+                  }
+                  
                   const added = toggleWishlist({
                     id: product.id,
                     name: product.name,

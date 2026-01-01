@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Steps } from 'antd'
 import { BuildingOffice2Icon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import { AUTH_STORAGE_KEYS, ROLE_DESCRIPTIONS_ID, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
+import { useUser } from '../contexts/UserContext'
 
 const roleCards = [
   {
@@ -28,7 +29,15 @@ const roleCards = [
 const AuthOnboarding = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const redirect = params.get('redirect') || '/masuk'
+  const { isAuthenticated } = useUser()
+  const redirect = params.get('redirect') || '/produk'
+
+  // Jika sudah login, langsung redirect ke halaman tujuan
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(redirect, { replace: true })
+    }
+  }, [isAuthenticated, redirect, navigate])
 
   const initialRole = useMemo(() => {
     const fromStorage = localStorage.getItem(AUTH_STORAGE_KEYS.ROLE)
@@ -38,6 +47,11 @@ const AuthOnboarding = () => {
 
   const [step, setStep] = useState(0)
   const [role, setRole] = useState(initialRole)
+
+  // Jika sudah login, jangan render apapun (akan redirect)
+  if (isAuthenticated) {
+    return null
+  }
 
   const saveRole = (nextRole) => {
     setRole(nextRole)
@@ -179,13 +193,13 @@ const AuthOnboarding = () => {
                     type="primary"
                     size="large"
                     className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                    onClick={() => navigate(`${redirect}?role=${role}`)}
+                    onClick={() => navigate(`/masuk?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
                   >
                     Masuk
                   </Button>
                   <Button
                     size="large"
-                    onClick={() => navigate(`/daftar?role=${role}`)}
+                    onClick={() => navigate(`/daftar?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
                     className="border-wastra-brown-200 text-wastra-brown-700"
                   >
                     Daftar
