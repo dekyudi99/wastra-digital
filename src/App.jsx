@@ -21,7 +21,6 @@ import ChatDetail from './pages/ChatDetail'
 import UserProfile from './pages/UserProfile'
 import OrderHistory from './pages/OrderHistory'
 import AddressManagement from './pages/AddressManagement'
-import Wishlist from './pages/Wishlist'
 import ForgotPassword from './pages/ForgotPassword'
 import ArtisanDashboard from './pages/ArtisanDashboard'
 import ArtisanProducts from './pages/ArtisanProducts'
@@ -102,14 +101,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AddressManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/wishlist" 
-                element={
-                  <ProtectedRoute>
-                    <Wishlist />
                   </ProtectedRoute>
                 } 
               />

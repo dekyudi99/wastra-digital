@@ -16,8 +16,8 @@ const LoginPage = () => {
   const { login, isAuthenticated } = useUser()
   const [loading, setLoading] = useState(false)
 
-  // Get redirect URL from query params
-  const redirectUrl = params.get('redirect') || '/produk'
+  // Get redirect URL from query params (default to profile page)
+  const redirectUrl = params.get('redirect') || '/profil'
 
   // If already authenticated, redirect to intended page or home
   if (isAuthenticated) {

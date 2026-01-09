@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Input, Dropdown, Avatar, Menu, message, Modal } from 'antd'
+import { Input, Dropdown, Avatar, Menu, Modal } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   BellIcon, 
@@ -8,7 +8,6 @@ import {
   MagnifyingGlassIcon, 
   ShoppingBagIcon, 
   UserIcon,
-  HeartIcon,
   ShoppingCartIcon,
   MapPinIcon,
   ArrowRightOnRectangleIcon,
@@ -28,6 +27,7 @@ const Header = () => {
   // Hanya tampilkan cart count jika user sudah login
   const cartCount = isAuthenticated ? cartItems.length : 0
   const isArtisan = hasRole(USER_ROLES.ARTISAN)
+  const isAdmin = hasRole(USER_ROLES.ADMIN)
   const isCustomer = hasRole(USER_ROLES.CUSTOMER)
 
   const handleSearch = () => {
@@ -94,6 +94,9 @@ const Header = () => {
             <nav className="hidden md:flex items-center gap-4 mr-10">
               <Link to="/" className={navLinkClass('/')}>Beranda</Link>
               <Link to="/produk" className={navLinkClass('/produk')}>Katalog Produk</Link>
+              {isAdmin && (
+                <Link to="/admin" className={navLinkClass('/admin')}>Dashboard Admin</Link>
+              )}
               {!isAuthenticated && (
                 <Link to="/onboarding" className={navLinkClass('/onboarding')}>Masuk</Link>
               )}
@@ -188,6 +191,15 @@ const Header = () => {
                             </div>
                           </Menu.Item>
                         </>
+                      ) : isAdmin ? (
+                        <>
+                          <Menu.Item key="profile" onClick={() => navigate('/profil')}>
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="w-4 h-4" />
+                              <span>Profil</span>
+                            </div>
+                          </Menu.Item>
+                        </>
                       ) : (
                         <>
                           <Menu.Item key="profile" onClick={() => navigate('/profil')}>
@@ -200,12 +212,6 @@ const Header = () => {
                             <div className="flex items-center gap-2">
                               <ShoppingCartIcon className="w-4 h-4" />
                               <span>Pesanan Saya</span>
-                            </div>
-                          </Menu.Item>
-                          <Menu.Item key="wishlist" onClick={() => navigate('/wishlist')}>
-                            <div className="flex items-center gap-2">
-                              <HeartIcon className="w-4 h-4" />
-                              <span>Wishlist</span>
                             </div>
                           </Menu.Item>
                           <Menu.Item key="addresses" onClick={() => navigate('/alamat')}>

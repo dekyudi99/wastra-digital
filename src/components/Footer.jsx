@@ -11,7 +11,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-6 py-12">
 
         {/* Top Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
 
           {/* Brand */}
           <div className="lg:col-span-2">
@@ -32,28 +32,6 @@ const Footer = () => {
               kain tradisional endek & songket dari Desa Sidemen,
               Karangasem, Bali.
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="text-base font-semibold mb-4">Tautan Cepat</h4>
-            <ul className="space-y-2 text-sm text-wastra-brown-300">
-              <li>
-                <Link to="/" className="hover:text-white transition">
-                  Beranda
-                </Link>
-              </li>
-              <li>
-                <Link to="/produk" className="hover:text-white transition">
-                  Katalog Produk
-                </Link>
-              </li>
-              <li>
-                <Link to="/admin" className="hover:text-white transition">
-                  Admin Dashboard
-                </Link>
-              </li>
-            </ul>
           </div>
 
           {/* Contact */}

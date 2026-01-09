@@ -6,6 +6,7 @@ import {
   FunnelIcon 
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
+import { mockProducts } from '../utils/mockProducts'
 
 const { Search } = Input
 const { Option } = Select
@@ -28,41 +29,7 @@ const ProductCatalog = () => {
     }))
   }, [searchQuery])
 
-  // Mock data - akan diganti dengan data dari API nanti
-  const products = [
-    {
-      id: 1,
-      name: 'Kain Endek Sidemen Motif Geometris',
-      price: 350000,
-      image: '/placeholder-endek.jpg',
-      category: 'endek',
-      artisan: 'Ibu Made Sari',
-    },
-    {
-      id: 2,
-      name: 'Kain Songket Emas Klasik',
-      price: 850000,
-      image: '/placeholder-songket.jpg',
-      category: 'songket',
-      artisan: 'Ibu Ketut Sari',
-    },
-    {
-      id: 3,
-      name: 'Kain Endek Modern Pattern',
-      price: 420000,
-      image: '/placeholder-endek-2.jpg',
-      category: 'endek',
-      artisan: 'Ibu Wayan Sari',
-    },
-    {
-      id: 4,
-      name: 'Kain Songket Tradisional Bali',
-      price: 950000,
-      image: '/placeholder-songket-2.jpg',
-      category: 'songket',
-      artisan: 'Ibu Made Sari',
-    },
-  ]
+  const products = mockProducts
 
   // Filter products berdasarkan search, category, dan priceRange
   const filteredProducts = products.filter((product) => {
@@ -202,7 +169,7 @@ const ProductCatalog = () => {
                   {product.name}
                 </h3>
                 <p className="text-gray-600 text-sm mb-2">
-                  Toko: {product.artisan}
+                  Toko: {product.artisan.name}
                 </p>
                 <p className="text-xl font-bold text-wastra-red">
                   {formatPrice(product.price)}

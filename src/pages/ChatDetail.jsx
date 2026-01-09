@@ -7,6 +7,7 @@ import {
   PaperAirplaneIcon
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
+import { getProductById } from '../utils/mockProducts'
 
 const ChatDetail = () => {
   const { sellerId } = useParams()
@@ -23,12 +24,8 @@ const ChatDetail = () => {
     isOnline: true
   }
 
-  // Mock product data if productId exists
-  const product = productId ? {
-    id: parseInt(productId),
-    name: productId === '1' ? 'Kain Endek Sidemen Motif Geometris' : 'Kain Songket Emas Klasik',
-    price: productId === '1' ? 350000 : 850000
-  } : null
+  // Data produk jika productId ada
+  const product = productId ? getProductById(productId) : null
 
   // Mock messages
   const [messages, setMessages] = useState([
@@ -98,10 +95,17 @@ const ChatDetail = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 py-4">
             <button
-              onClick={() => navigate(-1)}
-              className="flex-shrink-0 text-wastra-brown-600 hover:text-wastra-brown-800"
+              onClick={() => {
+                if (productId) {
+                  navigate(`/produk/${productId}`)
+                } else {
+                  navigate(-1)
+                }
+              }}
+              className="flex items-center gap-1 flex-shrink-0 text-wastra-brown-600 hover:text-wastra-brown-800"
             >
               <ArrowLeftIcon className="w-6 h-6" />
+              <span className="text-sm font-medium hidden sm:inline">Kembali</span>
             </button>
             
             <Avatar 

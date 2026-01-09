@@ -1,312 +1,158 @@
-import { useState } from 'react'
-import { 
-  Card, 
-  Row, 
-  Col, 
-  Table, 
-  Button, 
-  Statistic, 
-  Tag,
-  Space,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Upload
-} from 'antd'
+import { Card, Row, Col, Table, Button, Statistic, Tag, Space } from 'antd'
 import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
   ShoppingBagIcon,
   UserGroupIcon,
   CurrencyDollarIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  ExclamationTriangleIcon,
+  DocumentCheckIcon,
+  ClipboardDocumentListIcon,
+  TruckIcon,
 } from '@heroicons/react/24/outline'
 
-const { Option } = Select
-
 const AdminDashboard = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false)
-  const [form] = Form.useForm()
-
-  // Mock data - akan diganti dengan data dari API nanti
-  const products = [
-    {
-      key: '1',
-      id: 1,
-      name: 'Kain Endek Sidemen Motif Geometris',
-      category: 'endek',
-      price: 350000,
-      stock: 10,
-      artisan: 'Ibu Made Sari',
-      status: 'active',
-    },
-    {
-      key: '2',
-      id: 2,
-      name: 'Kain Songket Emas Klasik',
-      category: 'songket',
-      price: 850000,
-      stock: 5,
-      artisan: 'Ibu Ketut Sari',
-      status: 'active',
-    },
+  // Mock data - bisa diganti data API
+  const stats = [
+    { title: 'Pengrajin Aktif', value: 18, icon: <UserGroupIcon className="w-6 h-6" />, color: '#78350F' },
+    { title: 'Produk Aktif', value: 124, icon: <ShoppingBagIcon className="w-6 h-6" />, color: '#A16207' },
+    { title: 'Pesanan Berjalan', value: 42, icon: <TruckIcon className="w-6 h-6" />, color: '#0EA5E9' },
+    { title: 'Komisi Bulan Ini', value: 'Rp 12.500.000', icon: <CurrencyDollarIcon className="w-6 h-6" />, color: '#059669' },
   ]
 
-  const columns = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 80,
-    },
-    {
-      title: 'Nama Produk',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: 'Kategori',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category) => (
-        <Tag color={category === 'endek' ? 'blue' : 'gold'}>
-          {category === 'endek' ? 'Endek' : 'Songket'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Harga',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => 
-        new Intl.NumberFormat('id-ID', {
-          style: 'currency',
-          currency: 'IDR',
-          minimumFractionDigits: 0,
-        }).format(price),
-    },
-    {
-      title: 'Stok',
-      dataIndex: 'stock',
-      key: 'stock',
-    },
-    {
-      title: 'Pengrajin',
-      dataIndex: 'artisan',
-      key: 'artisan',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? 'Aktif' : 'Nonaktif'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Aksi',
-      key: 'action',
-      render: (_, record) => (
-        <Space size="middle">
-          <Button 
-            type="link" 
-            icon={<PencilIcon className="w-4 h-4" />}
-            onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button 
-            type="link" 
-            danger
-            icon={<TrashIcon className="w-4 h-4" />}
-            onClick={() => handleDelete(record)}
-          >
-            Hapus
-          </Button>
-        </Space>
-      ),
-    },
+  const verificationQueue = [
+    { key: 'v1', name: 'Ibu Putu Ayu', business: 'Tenun Sidemen', doc: 'NIB-2025-001', submittedAt: '10 Jan 2026', status: 'pending' },
+    { key: 'v2', name: 'Pak Ketut Yasa', business: 'Songket Agung', doc: 'NIB-2025-002', submittedAt: '9 Jan 2026', status: 'pending' },
   ]
 
-  const handleEdit = (record) => {
-    form.setFieldsValue(record)
-    setIsModalVisible(true)
-  }
+  const productReviewQueue = [
+    { key: 'p1', name: 'Songket Motif Pucuk', artisan: 'Ibu Luh Sari', category: 'songket', price: 1150000, status: 'review' },
+    { key: 'p2', name: 'Endek Ombak Laut', artisan: 'Pak Wayan Dana', category: 'endek', price: 420000, status: 'review' },
+  ]
 
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: 'Hapus Produk',
-      content: `Apakah Anda yakin ingin menghapus produk "${record.name}"?`,
-      okText: 'Ya, Hapus',
-      okType: 'danger',
-      cancelText: 'Batal',
-      onOk() {
-        // Handle delete
-        console.log('Delete:', record)
-      },
-    })
-  }
+  const issueOrders = [
+    { key: 'o1', id: 'ORD-2301', buyer: 'Rina', issue: 'Alamat tidak lengkap', status: 'butuh aksi' },
+    { key: 'o2', id: 'ORD-2302', buyer: 'Adi', issue: 'Pembayaran dicek manual', status: 'cek pembayaran' },
+  ]
 
-  const handleSubmit = (values) => {
-    console.log('Submit:', values)
-    setIsModalVisible(false)
-    form.resetFields()
-  }
+  const payoutQueue = [
+    { key: 'pay1', artisan: 'Ibu Made Sari', amount: 3200000, status: 'siap cair', eta: 'Hari ini' },
+    { key: 'pay2', artisan: 'Pak Nyoman Putra', amount: 2100000, status: 'menunggu verifikasi', eta: 'Besok' },
+  ]
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Dashboard Admin</h1>
-        <p className="text-gray-600">
-          Kelola produk, pengrajin, dan aktivitas platform
-        </p>
+        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-wastra-brown-700 uppercase tracking-wide">Peran Anda</p>
+            <h1 className="text-4xl font-bold mb-1 text-wastra-brown-900">Admin BUMDes</h1>
+            <p className="text-gray-600">
+              Kelola pengrajin, produk, dan aktivitas platform (tampilan admin).
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Statistics */}
       <Row gutter={[16, 16]} className="mb-8">
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="Total Produk"
-              value={45}
-              prefix={<ShoppingBagIcon className="w-6 h-6" />}
-              valueStyle={{ color: '#1890ff' }}
+        {stats.map((item) => (
+          <Col xs={24} sm={12} md={6} key={item.title}>
+            <Card className="border border-wastra-brown-100 rounded-xl">
+              <Statistic
+                title={item.title}
+                value={item.value}
+                prefix={item.icon}
+                valueStyle={{ color: item.color, fontWeight: 700 }}
+              />
+            </Card>
+          </Col>
+        ))}
+      </Row>
+
+      {/* Quick Actions */}
+      <Row gutter={[16, 16]} className="mb-8">
+        <Col xs={24} md={12}>
+          <Card className="border border-wastra-brown-100 rounded-xl" title="Antrian Verifikasi Pengrajin">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={verificationQueue}
+              columns={[
+                { title: 'Nama', dataIndex: 'name' },
+                { title: 'Usaha', dataIndex: 'business' },
+                { title: 'Dokumen', dataIndex: 'doc' },
+                { title: 'Diajukan', dataIndex: 'submittedAt', width: 120 },
+                {
+                  title: 'Status',
+                  dataIndex: 'status',
+                  width: 110,
+                  render: (status) => <Tag color="orange">Menunggu</Tag>,
+                },
+                {
+                  title: 'Aksi',
+                  key: 'action',
+                  width: 150,
+                  render: () => (
+                    <Space>
+                      <Button type="link" size="small" icon={<DocumentCheckIcon className="w-4 h-4" />}>Terima</Button>
+                      <Button type="link" size="small" danger icon={<ExclamationTriangleIcon className="w-4 h-4" />}>Tolak</Button>
+                    </Space>
+                  ),
+                },
+              ]}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="Total Pengrajin"
-              value={12}
-              prefix={<UserGroupIcon className="w-6 h-6" />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="Total Pendapatan"
-              value={12500000}
-              prefix={<CurrencyDollarIcon className="w-6 h-6" />}
-              suffix="IDR"
-              valueStyle={{ color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
-            <Statistic
-              title="Total Pesanan"
-              value={89}
-              prefix={<ChartBarIcon className="w-6 h-6" />}
-              valueStyle={{ color: '#f5222d' }}
+        <Col xs={24} md={12}>
+          <Card className="border border-wastra-brown-100 rounded-xl" title="Produk Menunggu Review">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={productReviewQueue}
+              columns={[
+                { title: 'Produk', dataIndex: 'name' },
+                { title: 'Pengrajin', dataIndex: 'artisan' },
+                { title: 'Kategori', dataIndex: 'category', width: 110, render: (c) => <Tag color={c === 'endek' ? 'blue' : 'gold'}>{c}</Tag> },
+                { title: 'Harga', dataIndex: 'price', width: 130, render: (p) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(p) },
+                { title: 'Status', dataIndex: 'status', width: 110, render: () => <Tag color="processing">Review</Tag> },
+              ]}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Products Table */}
-      <Card
-        title="Manajemen Produk"
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusIcon className="w-5 h-5" />}
-            onClick={() => {
-              form.resetFields()
-              setIsModalVisible(true)
-            }}
-          >
-            Tambah Produk
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={products}
-          pagination={{ pageSize: 10 }}
-        />
-      </Card>
-
-      {/* Add/Edit Modal */}
-      <Modal
-        title="Tambah/Edit Produk"
-        open={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false)
-          form.resetFields()
-        }}
-        onOk={() => form.submit()}
-        okText="Simpan"
-        cancelText="Batal"
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <Form.Item
-            name="name"
-            label="Nama Produk"
-            rules={[{ required: true, message: 'Masukkan nama produk' }]}
-          >
-            <Input placeholder="Nama produk" />
-          </Form.Item>
-
-          <Form.Item
-            name="category"
-            label="Kategori"
-            rules={[{ required: true, message: 'Pilih kategori' }]}
-          >
-            <Select placeholder="Pilih kategori">
-              <Option value="endek">Endek</Option>
-              <Option value="songket">Songket</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="price"
-            label="Harga"
-            rules={[{ required: true, message: 'Masukkan harga' }]}
-          >
-            <Input type="number" placeholder="Harga" />
-          </Form.Item>
-
-          <Form.Item
-            name="stock"
-            label="Stok"
-            rules={[{ required: true, message: 'Masukkan stok' }]}
-          >
-            <Input type="number" placeholder="Stok" />
-          </Form.Item>
-
-          <Form.Item
-            name="artisan"
-            label="Pengrajin"
-            rules={[{ required: true, message: 'Masukkan nama pengrajin' }]}
-          >
-            <Input placeholder="Nama pengrajin" />
-          </Form.Item>
-
-          <Form.Item
-            name="status"
-            label="Status"
-            rules={[{ required: true, message: 'Pilih status' }]}
-          >
-            <Select placeholder="Pilih status">
-              <Option value="active">Aktif</Option>
-              <Option value="inactive">Nonaktif</Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} md={12}>
+          <Card className="border border-wastra-brown-100 rounded-xl" title="Pesanan Bermasalah">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={issueOrders}
+              columns={[
+                { title: 'ID', dataIndex: 'id', width: 120 },
+                { title: 'Pembeli', dataIndex: 'buyer', width: 120 },
+                { title: 'Issue', dataIndex: 'issue' },
+                { title: 'Status', dataIndex: 'status', width: 150, render: (s) => <Tag color="red">{s}</Tag> },
+              ]}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card className="border border-wastra-brown-100 rounded-xl" title="Antrian Pencairan Komisi">
+            <Table
+              size="small"
+              pagination={false}
+              dataSource={payoutQueue}
+              columns={[
+                { title: 'Pengrajin', dataIndex: 'artisan' },
+                { title: 'Jumlah', dataIndex: 'amount', width: 140, render: (a) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(a) },
+                { title: 'Status', dataIndex: 'status', width: 150, render: (s) => <Tag color={s === 'siap cair' ? 'green' : 'orange'}>{s}</Tag> },
+                { title: 'ETA', dataIndex: 'eta', width: 100 },
+              ]}
+            />
+          </Card>
+        </Col>
+      </Row>
     </div>
   )
 }

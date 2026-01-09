@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Form, Input, Select, message } from 'antd'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
-import { useUser } from '../contexts/UserContext'
 
 const roleOptions = [
   { value: USER_ROLES.CUSTOMER, label: ROLE_LABELS_ID[USER_ROLES.CUSTOMER] },
@@ -13,7 +12,6 @@ const roleOptions = [
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { login } = useUser()
   const [loading, setLoading] = useState(false)
 
   const role = useMemo(() => {
@@ -27,16 +25,9 @@ const RegisterPage = () => {
     try {
       // Simulasi register - dalam real app, ini akan call API
       await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Auto login setelah register
-      login({
-        email: values.email,
-        name: values.name,
-        role: values.role,
-        phone: '',
-      })
-      
-      message.success('Akun berhasil dibuat')
+
+      // Setelah daftar, arahkan ke halaman login agar pengguna masuk terlebih dulu
+      message.success('Akun berhasil dibuat. Silakan masuk untuk melanjutkan.')
       navigate(`/masuk?role=${values.role}`)
     } catch (error) {
       message.error('Gagal membuat akun. Silakan coba lagi.')

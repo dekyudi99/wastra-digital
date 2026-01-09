@@ -8,56 +8,43 @@ import {
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  HeartIcon,
   ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
 import { useUser } from '../contexts/UserContext'
 import { useCart } from '../contexts/CartContext'
+import { getProductById } from '../utils/mockProducts'
 
 const ProductDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isImageModalVisible, setIsImageModalVisible] = useState(false)
-  const { toggleWishlist, isInWishlist, isAuthenticated } = useUser()
+  const { isAuthenticated } = useUser()
   const { cartItems, setCartItems } = useCart()
 
-  // Mock data - akan diganti dengan data dari API nanti
-  const product = {
-    id: parseInt(id),
-    name: 'Kain Endek Sidemen Motif Geometris',
-    price: 350000,
-    category: 'endek',
-    rating: 4.5,
-    totalReviews: 24,
-    artisan: {
-      id: 1,
-      name: 'Ibu Made Sari',
-    },
-    description: `
-      Kain endek tradisional dengan motif geometris yang khas dari 
-      Desa Sidemen. Ditenun dengan teknik tradisional menggunakan 
-      benang katun berkualitas tinggi. Setiap helai kain dibuat 
-      dengan teliti oleh pengrajin berpengalaman.
-      
-      Kain ini cocok untuk berbagai keperluan seperti pakaian adat, 
-      dekorasi rumah, atau sebagai koleksi kain tradisional. 
-      Motif geometris yang unik membuat kain ini terlihat modern 
-      namun tetap mempertahankan nilai tradisionalnya.
-    `,
-    specifications: {
-      material: 'Katun 100%',
-      width: '110 cm',
-      length: '250 cm',
-      weight: '450 gram',
-      technique: 'Tenun Tradisional',
-      origin: 'Desa Sidemen, Karangasem, Bali',
-    },
-    images: [
-      '/placeholder-endek.jpg',
-      '/placeholder-endek-2.jpg',
-    ],
+  const product = getProductById(id)
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-wastra-brown-50 py-8">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h1 className="text-2xl font-semibold text-wastra-brown-800 mb-4">
+            Produk tidak ditemukan
+          </h1>
+          <p className="text-wastra-brown-600 mb-6">
+            Produk yang Anda cari tidak tersedia atau telah dihapus.
+          </p>
+          <Button
+            type="primary"
+            onClick={() => navigate('/produk')}
+            className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
+          >
+            Kembali ke Katalog
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   // Mock reviews data
@@ -204,9 +191,11 @@ const ProductDetail = () => {
                   Chat Penjual
                 </Button>
               </div>
-              <p className="text-wastra-brown-700 whitespace-pre-line leading-relaxed">
-                {product.description}
-              </p>
+              {product.description && (
+                <p className="text-wastra-brown-700 whitespace-pre-line leading-relaxed">
+                  {product.description}
+                </p>
+              )}
             </div>
 
             <Divider className="my-4" />
@@ -223,7 +212,7 @@ const ProductDetail = () => {
               </Descriptions.Item>
             </Descriptions>
 
-            <div className="flex gap-3">
+            <div className="flex">
               <Button 
                 type="primary" 
                 size="large"
@@ -272,36 +261,6 @@ const ProductDetail = () => {
               >
                 Tambah ke Keranjang
               </Button>
-              <Button
-                size="large"
-                icon={<HeartIcon className={`w-5 h-5 ${isInWishlist(product.id) ? 'fill-red-500 text-red-500' : ''}`} />}
-                className={`h-12 ${isInWishlist(product.id) ? 'border-red-500 text-red-500' : ''}`}
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    Modal.confirm({
-                      title: 'Login Diperlukan',
-                      icon: <ExclamationCircleOutlined />,
-                      content: 'Silakan login terlebih dahulu untuk menambahkan produk ke wishlist.',
-                      okText: 'Login',
-                      cancelText: 'Batal',
-                      okType: 'primary',
-                      onOk: () => {
-                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
-                      },
-                    })
-                    return
-                  }
-                  
-                  const added = toggleWishlist({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
-                    image: product.images[0],
-                    artisan: product.artisan.name,
-                  })
-                  message.success(added ? 'Ditambahkan ke wishlist' : 'Dihapus dari wishlist')
-                }}
-              />
             </div>
           </Card>
         </Col>
