@@ -61,6 +61,8 @@ const LoginPage = () => {
     }
   }
 
+  const isAdmin = role === USER_ROLES.ADMIN
+
   return (
     <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)]">
       <div className="container mx-auto px-6 py-12">
@@ -68,29 +70,47 @@ const LoginPage = () => {
           <div className="mb-6">
             <h1 className="text-3xl font-semibold text-wastra-brown-800">Masuk</h1>
             <p className="text-wastra-brown-600 mt-2">
-              Masuk untuk melanjutkan sebagai <span className="font-medium">{ROLE_LABELS_ID[role] || 'Pengguna'}</span>.
+              {isAdmin ? (
+                'Masuk sebagai Admin BUMDes'
+              ) : (
+                <>
+                  Masuk untuk melanjutkan sebagai <span className="font-medium">{ROLE_LABELS_ID[role] || 'Pengguna'}</span>.
+                </>
+              )}
             </p>
           </div>
 
           <Card className="border border-wastra-brown-100 rounded-2xl">
             <Form layout="vertical" onFinish={onFinish} initialValues={{ role }}>
-              <Form.Item
-                name="role"
-                label="Peran"
-                rules={[{ required: true, message: 'Pilih peran' }]}
-              >
-                <Select options={roleOptions} />
-              </Form.Item>
+              {!isAdmin && (
+                <Form.Item
+                  name="role"
+                  label="Peran"
+                  rules={[{ required: true, message: 'Pilih peran' }]}
+                >
+                  <Select options={roleOptions} />
+                </Form.Item>
+              )}
+
+              {isAdmin && (
+                <Form.Item
+                  name="role"
+                  hidden
+                  initialValue={USER_ROLES.ADMIN}
+                >
+                  <Input type="hidden" />
+                </Form.Item>
+              )}
 
               <Form.Item
                 name="email"
-                label="Email"
+                label={isAdmin ? "Username" : "Email"}
                 rules={[
-                  { required: true, message: 'Masukkan email' },
-                  { type: 'email', message: 'Format email tidak valid' },
+                  { required: true, message: isAdmin ? 'Masukkan username' : 'Masukkan email' },
+                  ...(isAdmin ? [] : [{ type: 'email', message: 'Format email tidak valid' }]),
                 ]}
               >
-                <Input placeholder="nama@email.com" />
+                <Input placeholder={isAdmin ? "username" : "nama@email.com"} />
               </Form.Item>
 
               <Form.Item
@@ -102,9 +122,11 @@ const LoginPage = () => {
               </Form.Item>
 
               <div className="flex items-center justify-between mb-4">
-                <Link to="/onboarding" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
-                  Ganti peran
-                </Link>
+                {!isAdmin && (
+                  <Link to="/onboarding" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
+                    Ganti peran
+                  </Link>
+                )}
                 <Link to="/lupa-password" className="text-sm text-wastra-brown-600 hover:text-wastra-brown-800">
                   Lupa kata sandi?
                 </Link>
@@ -120,12 +142,14 @@ const LoginPage = () => {
                 Masuk
               </Button>
 
-              <div className="mt-4 text-sm text-wastra-brown-600">
-                Belum punya akun?{' '}
-                <Link to={`/daftar?role=${role}`} className="font-medium text-wastra-brown-800 hover:underline">
-                  Daftar
-                </Link>
-              </div>
+              {!isAdmin && (
+                <div className="mt-4 text-sm text-wastra-brown-600">
+                  Belum punya akun?{' '}
+                  <Link to={`/daftar?role=${role}`} className="font-medium text-wastra-brown-800 hover:underline">
+                    Daftar
+                  </Link>
+                </div>
+              )}
             </Form>
           </Card>
         </div>
