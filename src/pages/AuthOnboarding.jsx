@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Steps } from 'antd'
+import { Button, Card, Steps, Form, Input, message } from 'antd'
 import { BuildingOffice2Icon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import { AUTH_STORAGE_KEYS, ROLE_DESCRIPTIONS_ID, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
 import { useUser } from '../contexts/UserContext'
@@ -29,8 +29,10 @@ const roleCards = [
 const AuthOnboarding = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { isAuthenticated } = useUser()
+  const { isAuthenticated, login } = useUser()
   const redirect = params.get('redirect') || '/produk'
+  const [form] = Form.useForm()
+  const [loading, setLoading] = useState(false)
 
   // Jika sudah login, langsung redirect ke halaman tujuan
   useEffect(() => {
@@ -58,6 +60,28 @@ const AuthOnboarding = () => {
     localStorage.setItem(AUTH_STORAGE_KEYS.ROLE, nextRole)
   }
 
+  const handleAdminLogin = async (values) => {
+    setLoading(true)
+    try {
+      // Simulasi login - dalam real app, ini akan call API
+      await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Login dengan UserContext
+      login({
+        email: values.username,
+        role: USER_ROLES.ADMIN,
+        name: values.username, // Mock name from username
+      })
+      
+      message.success('Berhasil masuk')
+      navigate('/admin')
+    } catch (error) {
+      message.error('Gagal masuk. Silakan coba lagi.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="bg-wastra-brown-50">
       <div className="container mx-auto px-6 py-12">
@@ -75,7 +99,7 @@ const AuthOnboarding = () => {
               items={[
                 { title: 'Pilih Peran' },
                 { title: 'Ringkasan' },
-                { title: 'Masuk / Daftar' },
+                { title: 'Masuk' },
               ]}
             />
 
@@ -178,40 +202,91 @@ const AuthOnboarding = () => {
 
             {step === 2 && (
               <div className="mt-8">
-                <div className="rounded-2xl border border-wastra-brown-100 bg-white p-6">
-                  <div className="text-sm text-wastra-brown-600">Lanjut sebagai</div>
-                  <div className="text-xl font-semibold text-wastra-brown-800 mt-1">
-                    {ROLE_LABELS_ID[role]}
-                  </div>
-                  <div className="text-wastra-brown-600 mt-2">
-                    Silakan masuk atau buat akun baru.
-                  </div>
-                </div>
+                {role === USER_ROLES.ADMIN ? (
+                  <>
+                    <div className="rounded-2xl border border-wastra-brown-100 bg-white p-6 mb-6">
+                      <div className="text-sm text-wastra-brown-600">Masuk sebagai</div>
+                      <div className="text-xl font-semibold text-wastra-brown-800 mt-1">
+                        {ROLE_LABELS_ID[role]}
+                      </div>
+                      <div className="text-wastra-brown-600 mt-2">
+                        Masukkan username dan password untuk masuk.
+                      </div>
+                    </div>
 
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button
-                    type="primary"
-                    size="large"
-                    className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                    onClick={() => navigate(`/masuk?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
-                  >
-                    Masuk
-                  </Button>
-                  <Button
-                    size="large"
-                    onClick={() => navigate(`/daftar?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
-                    className="border-wastra-brown-200 text-wastra-brown-700"
-                  >
-                    Daftar
-                  </Button>
-                </div>
+                    <Form
+                      form={form}
+                      layout="vertical"
+                      onFinish={handleAdminLogin}
+                      className="mb-6"
+                    >
+                      <Form.Item
+                        name="username"
+                        label="Username"
+                        rules={[{ required: true, message: 'Masukkan username' }]}
+                      >
+                        <Input size="large" placeholder="username" />
+                      </Form.Item>
 
-                <div className="mt-6 flex justify-between">
-                  <Button onClick={() => setStep(1)}>Kembali</Button>
-                  <Button type="link" onClick={() => navigate('/')} className="text-wastra-brown-600">
-                    Lewati dulu
-                  </Button>
-                </div>
+                      <Form.Item
+                        name="password"
+                        label="Kata Sandi"
+                        rules={[{ required: true, message: 'Masukkan kata sandi' }]}
+                      >
+                        <Input.Password size="large" placeholder="••••••••" />
+                      </Form.Item>
+
+                      <Form.Item>
+                        <Button
+                          htmlType="submit"
+                          type="primary"
+                          size="large"
+                          loading={loading}
+                          className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
+                        >
+                          Masuk
+                        </Button>
+                      </Form.Item>
+                    </Form>
+
+                    <div className="flex justify-between">
+                      <Button onClick={() => setStep(1)}>Kembali</Button>
+                      <Button type="link" onClick={() => navigate('/')} className="text-wastra-brown-600">
+                        Lewati dulu
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="rounded-2xl border border-wastra-brown-100 bg-white p-6">
+                      <div className="text-sm text-wastra-brown-600">Lanjut sebagai</div>
+                      <div className="text-xl font-semibold text-wastra-brown-800 mt-1">
+                        {ROLE_LABELS_ID[role]}
+                      </div>
+                      <div className="text-wastra-brown-600 mt-2">
+                        Silakan masuk untuk melanjutkan.
+                      </div>
+                    </div>
+
+                    <div className="mt-6">
+                      <Button
+                        type="primary"
+                        size="large"
+                        className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
+                        onClick={() => navigate(`/masuk?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
+                      >
+                        Masuk
+                      </Button>
+                    </div>
+
+                    <div className="mt-6 flex justify-between">
+                      <Button onClick={() => setStep(1)}>Kembali</Button>
+                      <Button type="link" onClick={() => navigate('/')} className="text-wastra-brown-600">
+                        Lewati dulu
+                      </Button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </Card>
