@@ -16,6 +16,11 @@ const ChatDetail = () => {
   const navigate = useNavigate()
   const [message, setMessage] = useState('')
   const messagesEndRef = useRef(null)
+  
+  // Ensure message is always empty when component mounts or productId changes
+  useEffect(() => {
+    setMessage('')
+  }, [productId, sellerId])
 
   // Mock seller data
   const seller = {
@@ -27,27 +32,43 @@ const ChatDetail = () => {
   // Data produk jika productId ada
   const product = productId ? getProductById(productId) : null
 
-  // Mock messages
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: 'seller',
-      text: 'Halo, terima kasih sudah tertarik dengan produk kami. Ada yang ingin ditanyakan?',
-      time: '10:30'
-    },
-    {
-      id: 2,
-      sender: 'buyer',
-      text: 'Halo, saya tertarik dengan produk ini. Apakah masih tersedia?',
-      time: '10:32'
-    },
-    {
-      id: 3,
-      sender: 'seller',
-      text: 'Ya, masih tersedia. Ada yang ingin ditanyakan lebih lanjut?',
-      time: '10:33'
+  // Mock messages - jika ada productId (chat baru dari produk), mulai dengan chat kosong atau hanya pesan seller
+  // Jika tidak ada productId (chat yang sudah ada), tampilkan riwayat chat
+  const [messages, setMessages] = useState(() => {
+    // Jika ada productId, ini chat baru dari produk, jangan ada pesan buyer yang otomatis
+    if (productId) {
+      // Hanya pesan seller pertama atau kosong
+      return [
+        {
+          id: 1,
+          sender: 'seller',
+          text: 'Halo, terima kasih sudah tertarik dengan produk kami. Ada yang ingin ditanyakan?',
+          time: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]
     }
-  ])
+    // Jika tidak ada productId, tampilkan riwayat chat yang sudah ada
+    return [
+      {
+        id: 1,
+        sender: 'seller',
+        text: 'Halo, terima kasih sudah tertarik dengan produk kami. Ada yang ingin ditanyakan?',
+        time: '10:30'
+      },
+      {
+        id: 2,
+        sender: 'buyer',
+        text: 'Halo, saya tertarik dengan produk ini. Apakah masih tersedia?',
+        time: '10:32'
+      },
+      {
+        id: 3,
+        sender: 'seller',
+        text: 'Ya, masih tersedia. Ada yang ingin ditanyakan lebih lanjut?',
+        time: '10:33'
+      }
+    ]
+  })
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -89,8 +110,8 @@ const ChatDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-wastra-brown-50 flex flex-col">
-      {/* Header */}
+    <div className="min-h-screen bg-wastra-brown-50 flex flex-col overflow-x-hidden w-full">
+      {/* Header Chat */}
       <div className="bg-white border-b border-wastra-brown-200 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-4 py-4">

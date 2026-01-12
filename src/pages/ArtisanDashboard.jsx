@@ -147,8 +147,8 @@ const ArtisanDashboard = () => {
   ]
 
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)]">
-      <div className="container mx-auto px-6 py-8">
+    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
+      <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-semibold text-wastra-brown-800">Dashboard Pengrajin</h1>

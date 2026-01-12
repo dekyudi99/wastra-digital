@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, Radio, Input, Modal, Form, Select, Upload, message } from 'antd'
+import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { 
   ArrowLeftIcon,
@@ -14,12 +15,76 @@ import { useCart } from '../contexts/CartContext'
 import { useUser } from '../contexts/UserContext'
 import { provinces, regencies, districts } from '../utils/indonesiaRegions'
 import { getSellerBanks, getSellerInfo } from '../utils/sellerBankAccounts'
+import { USER_ROLES } from '../utils/authRoles'
 
 const Checkout = () => {
   const navigate = useNavigate()
   const { getSelectedItems, removeSelectedItems } = useCart()
-  const { addOrder, addresses, getDefaultAddress, addAddress, updateAddress } = useUser()
+  const { addOrder, addresses, getDefaultAddress, addAddress, updateAddress, hasRole } = useUser()
   const [paymentMethod, setPaymentMethod] = useState('cod')
+  
+  const isArtisan = hasRole(USER_ROLES.ARTISAN)
+  
+  // Prevent artisan from accessing checkout
+  useEffect(() => {
+    if (isArtisan) {
+      Modal.warning({
+        title: 'Akses Dibatasi',
+        icon: <ExclamationCircleOutlined />,
+        content: 'Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.',
+        onOk: () => {
+          navigate('/produk')
+        },
+      })
+    }
+  }, [isArtisan, navigate])
+  
+  // Early return if artisan tries to access checkout
+  if (isArtisan) {
+    return (
+      <div className="w-full bg-wastra-brown-50 min-h-screen pb-32 overflow-x-hidden">
+        <div className="bg-white border-b border-wastra-brown-100">
+          <div className="w-full px-4 sm:px-6 md:px-8 max-w-6xl mx-auto py-3 sm:py-4">
+            <p className="text-xs sm:text-sm text-gray-400 mb-1 sm:mb-2">Halaman Checkout</p>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                onClick={() => navigate('/produk')}
+                className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center hover:bg-wastra-brown-50 rounded-lg transition-colors"
+                aria-label="Kembali"
+              >
+                <ArrowLeftIcon className="w-5 h-5 sm:w-6 sm:h-6 text-wastra-brown-800" />
+              </button>
+              <h1 className="text-2xl sm:text-3xl font-bold text-wastra-brown-800">
+                Checkout
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto px-4 sm:px-6 md:px-8 max-w-6xl py-12 sm:py-20">
+          <div className="text-center px-4">
+            <div className="mb-4 sm:mb-6">
+              <ExclamationCircleOutlined className="text-4xl sm:text-6xl text-wastra-brown-300 mx-auto" style={{ fontSize: '48px' }} />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-semibold text-wastra-brown-800 mb-2 sm:mb-3">
+              Akses Dibatasi
+            </h2>
+            <p className="text-sm sm:text-base text-wastra-brown-600 mb-6 sm:mb-8 max-w-md mx-auto">
+              Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.
+            </p>
+            <Button
+              size="large"
+              className="bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-11 sm:h-12 px-6 sm:px-8 rounded-lg font-medium text-sm sm:text-base"
+              onClick={() => navigate('/produk')}
+            >
+              Kembali ke Katalog
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
   const [voucherCode, setVoucherCode] = useState('')
   const [shippingOption, setShippingOption] = useState('reguler')
   const [address, setAddress] = useState(null) // null untuk pengguna baru
@@ -492,7 +557,7 @@ const Checkout = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl py-6">
+        <div className="w-full px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-6 overflow-x-hidden">
         {/* Delivery Address Section */}
         <Card className="mb-6 border border-wastra-brown-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-4 pb-4 border-b border-wastra-brown-100">

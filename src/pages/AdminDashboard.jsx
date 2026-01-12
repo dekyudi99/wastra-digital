@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, Row, Col, Table, Button, Statistic, Tag, Space } from 'antd'
 import {
   ShoppingBagIcon,
@@ -18,6 +19,7 @@ import { formatPrice } from '../utils/format'
 const COMMISSION_RATE = 0.1 // 10% komisi BUMDes
 
 const AdminDashboard = () => {
+  const navigate = useNavigate()
   const { orders } = useUser()
 
   // Dummy statistics untuk komisi pendapatan bulan ini
@@ -104,7 +106,7 @@ const AdminDashboard = () => {
   ]
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-3 sm:px-4 max-w-7xl mx-auto py-6 sm:py-8 overflow-x-hidden">
       <div className="mb-8">
         <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div>
@@ -113,6 +115,15 @@ const AdminDashboard = () => {
             <p className="text-gray-600">
               Kelola pengrajin, produk, dan aktivitas platform (tampilan admin).
             </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="primary"
+              onClick={() => navigate('/admin/produk')}
+              className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
+            >
+              Manajemen Produk
+            </Button>
           </div>
         </div>
       </div>

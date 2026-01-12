@@ -87,8 +87,8 @@ const AddressManagement = () => {
   const availableDistricts = selectedRegency ? districts[selectedRegency] || [] : []
 
   return (
-    <div className="bg-wastra-brown-50 min-h-screen py-8">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+    <div className="bg-wastra-brown-50 min-h-screen py-6 sm:py-8 overflow-x-hidden w-full">
+      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <button

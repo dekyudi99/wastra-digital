@@ -66,9 +66,9 @@ const ForgotPassword = () => {
   }
 
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] py-12">
-      <div className="container mx-auto px-6">
-        <div className="max-w-md mx-auto">
+    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] py-8 sm:py-12 overflow-x-hidden w-full">
+      <div className="w-full px-4 sm:px-6 max-w-md mx-auto">
+        <div className="w-full">
           {/* Back Button */}
           <Link
             to="/masuk"

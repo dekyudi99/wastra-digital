@@ -52,8 +52,8 @@ const OrderSuccess = () => {
   const orderItems = items || products || []
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-wastra-brown-50 to-white py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-wastra-brown-50 to-white py-8 sm:py-12 px-3 sm:px-4 md:px-6 lg:px-8 overflow-x-hidden w-full">
+      <div className="w-full max-w-3xl mx-auto">
         {/* Back Button */}
         <div className="mb-6">
           <Button

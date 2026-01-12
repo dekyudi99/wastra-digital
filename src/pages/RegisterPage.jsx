@@ -37,9 +37,9 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)]">
-      <div className="container mx-auto px-6 py-12">
-        <div className="max-w-md mx-auto">
+    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
+      <div className="w-full px-4 sm:px-6 max-w-md mx-auto py-8 sm:py-12">
+        <div className="w-full">
           <div className="mb-6">
             <h1 className="text-3xl font-semibold text-wastra-brown-800">Daftar</h1>
             <p className="text-wastra-brown-600 mt-2">

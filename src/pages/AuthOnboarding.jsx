@@ -83,9 +83,9 @@ const AuthOnboarding = () => {
   }
 
   return (
-    <div className="bg-wastra-brown-50">
-      <div className="container mx-auto px-6 py-12">
-        <div className="max-w-3xl mx-auto">
+    <div className="bg-wastra-brown-50 overflow-x-hidden w-full">
+      <div className="w-full px-4 sm:px-6 max-w-3xl mx-auto py-8 sm:py-12">
+        <div className="w-full">
           <div className="mb-8">
             <h1 className="text-3xl font-semibold text-wastra-brown-800">Mulai di Wastra Digital</h1>
             <p className="text-wastra-brown-600 mt-2">

@@ -57,10 +57,10 @@ const LandingPage = () => {
   }
 
   return (
-    <div className="w-full bg-white">
+    <div className="w-full bg-white overflow-x-hidden">
       {/* Hero Section - Clean & Minimalist */}
       <section className="bg-wastra-brown-50 py-20 reveal">
-        <div className="container mx-auto px-24 md:px-28 lg:px-32 xl:px-40 max-w-6xl">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <div className="space-y-4">
@@ -138,7 +138,7 @@ const LandingPage = () => {
 
       {/* Shop By Category - Clean Cards */}
       <section className="py-16 bg-white reveal" style={{ '--reveal-delay': '60ms' }}>
-        <div className="container mx-auto px-8 md:px-12">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 max-w-7xl mx-auto">
           <div className="mb-8">
             <h2 className="text-3xl font-light text-wastra-brown-800">
               Beli Berdasarkan Kategori
@@ -181,7 +181,7 @@ const LandingPage = () => {
 
       {/* Featured Products - Clean Grid */}
       <section className="py-16 bg-wastra-brown-50 reveal" style={{ '--reveal-delay': '80ms' }}>
-        <div className="container mx-auto px-8 md:px-12">
+        <div className="w-full px-4 sm:px-6 md:px-8 lg:px-12 max-w-7xl mx-auto">
           <div className="mb-8">
             <h2 className="text-3xl font-light text-wastra-brown-800">
               Produk Unggulan
@@ -261,7 +261,7 @@ const LandingPage = () => {
 
       {/* Storytelling: Sidemen & Artisans */}
       <section className="py-16 bg-white reveal" style={{ '--reveal-delay': '100ms' }}>
-        <div className="container mx-auto px-6">
+        <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div>
               <h2 className="text-3xl font-light text-wastra-brown-800 mb-3">
@@ -303,7 +303,7 @@ const LandingPage = () => {
 
       {/* Features Section - Clean Icons */}
       <section className="py-20 bg-white reveal" style={{ '--reveal-delay': '120ms' }}>
-        <div className="container mx-auto px-6">
+        <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-light text-wastra-brown-800 mb-4">
               Mengapa Wastra Digital?
@@ -343,7 +343,7 @@ const LandingPage = () => {
 
       {/* How it works */}
       <section id="cara-kerja" className="py-16 bg-wastra-brown-50 reveal" style={{ '--reveal-delay': '140ms' }}>
-        <div className="container mx-auto px-6">
+        <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto">
           <div className="mb-10">
             <h2 className="text-3xl font-light text-wastra-brown-800">Cara Belanja</h2>
             <p className="text-wastra-brown-600 mt-2">Alur sederhana untuk menemukan dan membeli wastra pilihan Anda.</p>

@@ -23,13 +23,8 @@ const ArtisanProducts = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   
-  // Check if we're in add mode (tambah) or edit mode (id exists)
-  const isAddMode = location.pathname.includes('/tambah')
-  const isEditMode = !!id
-  const showForm = isAddMode || isEditMode
-
-  // Mock data produk pengrajin - akan dari context/API nanti
-  const [products, setProducts] = useState([
+  // Helper default products (harus dideklarasikan sebelum dipakai di useState)
+  const getDefaultProducts = () => [
     {
       key: '1',
       id: '1',
@@ -40,6 +35,9 @@ const ArtisanProducts = () => {
       description: 'Kain endek tradisional dengan motif geometris',
       images: ['/placeholder-endek.jpg'],
       status: 'active',
+      warningMessage: null,
+      warningStatus: null,
+      flaggedAt: null,
     },
     {
       key: '2',
@@ -51,8 +49,51 @@ const ArtisanProducts = () => {
       description: 'Kain songket dengan benang emas',
       images: ['/placeholder-songket.jpg'],
       status: 'active',
+      warningMessage: null,
+      warningStatus: null,
+      flaggedAt: null,
     },
-  ])
+  ]
+
+  // Check if we're in add mode (tambah) or edit mode (id exists)
+  const isAddMode = location.pathname.includes('/tambah')
+  const isEditMode = !!id
+  const showForm = isAddMode || isEditMode
+
+  // Load products dari localStorage (sinkron dengan admin) atau default
+  const [products, setProducts] = useState(() => {
+    const storedProducts = localStorage.getItem('wastra.adminProducts')
+    if (storedProducts) {
+      try {
+        const parsed = JSON.parse(storedProducts)
+        // Filter hanya produk milik pengrajin ini (berdasarkan user.id atau artisan name)
+        // Untuk demo, kita ambil semua produk yang ada warning atau semua produk
+        return parsed.map(p => ({
+          ...p,
+          key: String(p.id),
+        }))
+      } catch (error) {
+        return getDefaultProducts()
+      }
+    }
+    return getDefaultProducts()
+  })
+
+  // Sync products dengan localStorage
+  useEffect(() => {
+    const storedProducts = localStorage.getItem('wastra.adminProducts')
+    if (storedProducts) {
+      try {
+        const parsed = JSON.parse(storedProducts)
+        setProducts(parsed.map(p => ({
+          ...p,
+          key: String(p.id),
+        })))
+      } catch (error) {
+        console.error('Error loading products:', error)
+      }
+    }
+  }, [])
 
   const columns = [
     {
@@ -74,6 +115,17 @@ const ArtisanProducts = () => {
       title: 'Nama Produk',
       dataIndex: 'name',
       key: 'name',
+      render: (text, record) => (
+        <div>
+          <div className="font-medium">{text}</div>
+          {record.warningMessage && record.warningStatus === 'pending' && (
+            <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
+              <ExclamationCircleOutlined className="w-3 h-3" />
+              Ada peringatan dari admin
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Kategori',
@@ -100,34 +152,62 @@ const ArtisanProducts = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? 'Aktif' : 'Nonaktif'}
-        </Tag>
+      render: (status, record) => (
+        <div>
+          <Tag color={status === 'active' ? 'green' : 'red'}>
+            {status === 'active' ? 'Aktif' : 'Nonaktif'}
+          </Tag>
+          {record.warningMessage && (
+            <div className="mt-1">
+              {record.warningStatus === 'pending' && (
+                <Tag color="orange">Ada Peringatan</Tag>
+              )}
+              {record.warningStatus === 'acknowledged' && (
+                <Tag color="blue">Dikonfirmasi</Tag>
+              )}
+              {record.warningStatus === 'updated' && (
+                <Tag color="green">Sudah Diperbarui</Tag>
+              )}
+            </div>
+          )}
+        </div>
       ),
     },
     {
       title: 'Aksi',
       key: 'action',
+      width: 200,
       render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<PencilIcon className="w-4 h-4" />}
-            onClick={() => handleEdit(record)}
-          >
-            Edit
-          </Button>
-          <Button
-            type="link"
-            danger
-            size="small"
-            icon={<TrashIcon className="w-4 h-4" />}
-            onClick={() => handleDelete(record.id)}
-          >
-            Hapus
-          </Button>
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          <Space size="small">
+            <Button
+              type="link"
+              size="small"
+              icon={<PencilIcon className="w-4 h-4" />}
+              onClick={() => handleEdit(record)}
+            >
+              Edit
+            </Button>
+            <Button
+              type="link"
+              danger
+              size="small"
+              icon={<TrashIcon className="w-4 h-4" />}
+              onClick={() => handleDelete(record.id)}
+            >
+              Hapus
+            </Button>
+          </Space>
+          {record.warningMessage && record.warningStatus === 'pending' && (
+            <Button
+              type="primary"
+              size="small"
+              onClick={() => handleConfirmUpdated(record.id)}
+              className="bg-green-600 hover:bg-green-700 w-full"
+            >
+              Sudah Diperbarui
+            </Button>
+          )}
         </Space>
       ),
     },
@@ -146,8 +226,54 @@ const ArtisanProducts = () => {
       okType: 'danger',
       cancelText: 'Batal',
       onOk: () => {
-        setProducts(products.filter(p => p.id !== productId))
+        const updatedProducts = products.filter(p => p.id !== productId)
+        setProducts(updatedProducts)
+        // Update localStorage juga
+        const storedProducts = localStorage.getItem('wastra.adminProducts')
+        if (storedProducts) {
+          try {
+            const parsed = JSON.parse(storedProducts)
+            const updated = parsed.filter(p => p.id !== productId)
+            localStorage.setItem('wastra.adminProducts', JSON.stringify(updated))
+          } catch (error) {
+            console.error('Error updating localStorage:', error)
+          }
+        }
         message.success('Produk berhasil dihapus')
+      },
+    })
+  }
+
+  const handleConfirmUpdated = (productId) => {
+    Modal.confirm({
+      title: 'Konfirmasi Pembaruan',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Apakah Anda sudah memperbarui produk sesuai dengan peringatan dari admin?',
+      okText: 'Ya, Sudah Diperbarui',
+      cancelText: 'Batal',
+      onOk: () => {
+        const updatedProducts = products.map(p => 
+          p.id === productId 
+            ? { ...p, warningStatus: 'updated', updatedAt: new Date().toISOString() }
+            : p
+        )
+        setProducts(updatedProducts)
+        // Update localStorage juga
+        const storedProducts = localStorage.getItem('wastra.adminProducts')
+        if (storedProducts) {
+          try {
+            const parsed = JSON.parse(storedProducts)
+            const updated = parsed.map(p => 
+              p.id === productId 
+                ? { ...p, warningStatus: 'updated', updatedAt: new Date().toISOString() }
+                : p
+            )
+            localStorage.setItem('wastra.adminProducts', JSON.stringify(updated))
+          } catch (error) {
+            console.error('Error updating localStorage:', error)
+          }
+        }
+        message.success('Terima kasih! Produk telah dikonfirmasi sudah diperbarui.')
       },
     })
   }
@@ -212,8 +338,8 @@ const ArtisanProducts = () => {
   }, [id, isEditMode, isAddMode, products, form])
 
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)]">
-      <div className="container mx-auto px-6 py-8">
+    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
+      <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -244,6 +370,31 @@ const ArtisanProducts = () => {
             </Button>
           )}
         </div>
+
+        {/* Warning Banner */}
+        {!isAddMode && !isEditMode && products.some(p => p.warningMessage && p.warningStatus === 'pending') && (
+          <Card className="border border-orange-300 bg-orange-50 mb-6">
+            <div className="flex items-start gap-3">
+              <ExclamationCircleOutlined className="text-orange-600 text-xl mt-1 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-orange-800 mb-2">
+                  ⚠️ Ada Produk dengan Peringatan dari Admin
+                </h3>
+                <div className="text-sm text-orange-700 space-y-2">
+                  {products.filter(p => p.warningMessage && p.warningStatus === 'pending').map(product => (
+                    <div key={product.id} className="p-3 bg-white rounded-lg border border-orange-200">
+                      <div className="font-medium text-orange-900 mb-1">{product.name}</div>
+                      <div className="text-orange-700 mb-2">{product.warningMessage}</div>
+                      <div className="text-xs text-orange-600">
+                        Silakan perbarui produk Anda dan klik tombol "Sudah Diperbarui" setelah selesai.
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Products Table */}
         {!isAddMode && !isEditMode && (

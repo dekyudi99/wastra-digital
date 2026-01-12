@@ -27,16 +27,16 @@ const Layout = ({ children }) => {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-hidden w-full">
       <Header />
 
       {/* MAIN dengan transisi */}
       <main 
-        className={`flex-1 overflow-hidden transition-opacity duration-200 ease-in-out ${
+        className={`flex-1 w-full overflow-x-hidden transition-opacity duration-200 ease-in-out ${
           isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <div className="page-transition">
+        <div className="page-transition w-full">
           {children}
         </div>
       </main>

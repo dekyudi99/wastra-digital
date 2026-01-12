@@ -10,6 +10,7 @@ import ProductCatalog from './pages/ProductCatalog'
 import ProductDetail from './pages/ProductDetail'
 import ArtisanProfile from './pages/ArtisanProfile'
 import AdminDashboard from './pages/AdminDashboard'
+import AdminProductManagement from './pages/AdminProductManagement'
 import AuthOnboarding from './pages/AuthOnboarding'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -25,7 +26,6 @@ import ForgotPassword from './pages/ForgotPassword'
 import ArtisanDashboard from './pages/ArtisanDashboard'
 import ArtisanProducts from './pages/ArtisanProducts'
 import ArtisanOrders from './pages/ArtisanOrders'
-import ArtisanProfilePage from './pages/ArtisanProfile'
 
 
 
@@ -45,6 +45,14 @@ function App() {
                 element={
                   <ProtectedRoute requireRole={USER_ROLES.ADMIN}>
                     <AdminDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin/produk" 
+                element={
+                  <ProtectedRoute requireRole={USER_ROLES.ADMIN}>
+                    <AdminProductManagement />
                   </ProtectedRoute>
                 } 
               />
@@ -178,7 +186,7 @@ function App() {
                 path="/pengrajin/profil" 
                 element={
                   <ProtectedRoute requireRole={USER_ROLES.ARTISAN}>
-                    <ArtisanProfilePage />
+                    <ArtisanProfile />
                   </ProtectedRoute>
                 } 
               />

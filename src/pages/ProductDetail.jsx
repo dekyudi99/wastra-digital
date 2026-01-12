@@ -14,14 +14,17 @@ import { formatPrice } from '../utils/format'
 import { useUser } from '../contexts/UserContext'
 import { useCart } from '../contexts/CartContext'
 import { getProductById } from '../utils/mockProducts'
+import { USER_ROLES } from '../utils/authRoles'
 
 const ProductDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isImageModalVisible, setIsImageModalVisible] = useState(false)
-  const { isAuthenticated } = useUser()
+  const { isAuthenticated, hasRole } = useUser()
   const { cartItems, setCartItems } = useCart()
+  
+  const isArtisan = hasRole(USER_ROLES.ARTISAN)
 
   const product = getProductById(id)
 
@@ -85,28 +88,28 @@ const ProductDetail = () => {
 
 
   return (
-    <div className="min-h-screen bg-wastra-brown-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-wastra-brown-50 py-3 sm:py-4 md:py-6 lg:py-8 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <Link to="/produk">
           <Button 
             type="text" 
-            icon={<ArrowLeftIcon className="w-5 h-5" />}
-            className="mb-6 text-wastra-brown-600 hover:text-wastra-brown-800"
+            icon={<ArrowLeftIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
+            className="mb-4 sm:mb-6 text-wastra-brown-600 hover:text-wastra-brown-800 text-sm sm:text-base"
           >
             Kembali ke Katalog
           </Button>
         </Link>
 
-        <Row gutter={[32, 32]}>
+        <Row gutter={[12, 12]} className="!mx-0">
         {/* Product Images */}
-        <Col xs={24} md={12}>
+        <Col xs={24} md={12} className="!px-2 sm:!px-3 md:!px-4">
           <Card className="border border-wastra-brown-200 rounded-xl shadow-sm">
             {/* Main Image */}
             <div 
-              className="h-80 bg-wastra-brown-50 flex items-center justify-center rounded-lg mb-4 border border-wastra-brown-100 cursor-pointer hover:opacity-90 transition"
+              className="h-48 sm:h-64 md:h-80 bg-wastra-brown-50 flex items-center justify-center rounded-lg mb-3 sm:mb-4 border border-wastra-brown-100 cursor-pointer hover:opacity-90 transition"
               onClick={() => setIsImageModalVisible(true)}
             >
-              <span className="text-wastra-brown-400 text-base text-center px-4">
+              <span className="text-wastra-brown-400 text-xs sm:text-sm md:text-base text-center px-2 sm:px-4">
                 {product.name} - Foto {selectedImageIndex + 1}
               </span>
             </div>
@@ -135,40 +138,40 @@ const ProductDetail = () => {
         </Col>
 
         {/* Product Info */}
-        <Col xs={24} md={12}>
-          <Card className="border border-wastra-brown-200 rounded-xl shadow-sm">
-            <div className="mb-4">
-              <Tag color={product.category === 'endek' ? 'blue' : 'gold'} className="mb-2">
+        <Col xs={24} md={12} className="!px-2 sm:!px-3 md:!px-4">
+          <Card className="border border-wastra-brown-200 rounded-xl shadow-sm" bodyStyle={{ padding: '12px' }}>
+            <div className="mb-3 sm:mb-4">
+              <Tag color={product.category === 'endek' ? 'blue' : 'gold'} className="mb-2 text-xs sm:text-sm">
                 {product.category === 'endek' ? 'Endek' : 'Songket'}
               </Tag>
-              <h1 className="text-3xl font-bold mb-4 text-wastra-brown-800">{product.name}</h1>
-              <div className="flex items-center gap-3 mb-3">
-                <Rate disabled defaultValue={product.rating} allowHalf className="text-sm" />
-                <span className="text-wastra-brown-600 text-sm">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-wastra-brown-800 leading-tight">{product.name}</h1>
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <Rate disabled defaultValue={product.rating} allowHalf className="text-xs sm:text-sm" />
+                <span className="text-wastra-brown-600 text-xs sm:text-sm">
                   {product.rating} ({product.totalReviews} ulasan)
                 </span>
               </div>
-              <p className="text-3xl font-bold text-red-600 mb-4">
+              <p className="text-2xl sm:text-3xl font-bold text-red-600 mb-3 sm:mb-4">
                 {formatPrice(product.price)}
               </p>
             </div>
 
-            <Divider className="my-4" />
+            <Divider className="my-3 sm:my-4" />
 
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <Link to={`/artisan/${product.artisan.id}`}>
+            <div className="mb-4 sm:mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
+                <Link to={`/artisan/${product.artisan.id}`} className="flex-1 min-w-0">
                   <Button 
                     type="link" 
-                    icon={<UserIcon className="w-5 h-5" />}
-                    className="p-0 text-wastra-brown-600 hover:text-wastra-brown-800"
+                    icon={<UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                    className="p-0 text-wastra-brown-600 hover:text-wastra-brown-800 text-sm sm:text-base"
                   >
-                    <span className="text-lg">Toko: {product.artisan.name}</span>
+                    <span className="text-sm sm:text-base md:text-lg truncate block">Toko: {product.artisan.name}</span>
                   </Button>
                 </Link>
                 <Button
                   type="default"
-                  icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
+                  icon={<ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
                   onClick={() => {
                     if (!isAuthenticated) {
                       Modal.confirm({
@@ -186,21 +189,21 @@ const ProductDetail = () => {
                     }
                     navigate(`/chat/${product.artisan.id}?productId=${product.id}`)
                   }}
-                  className="border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400"
+                  className="border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400 text-xs sm:text-sm h-9 sm:h-10"
                 >
                   Chat Penjual
                 </Button>
               </div>
               {product.description && (
-                <p className="text-wastra-brown-700 whitespace-pre-line leading-relaxed">
+                <p className="text-sm sm:text-base text-wastra-brown-700 whitespace-pre-line leading-relaxed">
                   {product.description}
                 </p>
               )}
             </div>
 
-            <Divider className="my-4" />
+            <Divider className="my-3 sm:my-4" />
 
-            <Descriptions title="Spesifikasi Produk" bordered column={1} className="mb-6">
+            <Descriptions title="Spesifikasi Produk" bordered column={1} className="mb-4 sm:mb-6 text-xs sm:text-sm">
               <Descriptions.Item label="Bahan">
                 {product.specifications.material}
               </Descriptions.Item>
@@ -212,13 +215,23 @@ const ProductDetail = () => {
               </Descriptions.Item>
             </Descriptions>
 
-            <div className="flex">
+            <div className="flex flex-col gap-2 sm:gap-3">
               <Button 
-                type="primary" 
+                type="default" 
                 size="large"
-                icon={<ShoppingCartIcon className="w-5 h-5" />}
-                className="flex-1 bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-12"
+                icon={<ShoppingCartIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
+                className="flex-1 border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400 h-11 sm:h-12 text-sm sm:text-base"
+                disabled={isArtisan}
                 onClick={() => {
+                  if (isArtisan) {
+                    Modal.warning({
+                      title: 'Akses Dibatasi',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Pengrajin tidak dapat menambahkan produk ke keranjang. Silakan gunakan akun pembeli untuk melakukan pembelian.',
+                    })
+                    return
+                  }
+                  
                   if (!isAuthenticated) {
                     Modal.confirm({
                       title: 'Login Diperlukan',
@@ -260,6 +273,68 @@ const ProductDetail = () => {
                 }}
               >
                 Tambah ke Keranjang
+              </Button>
+              <Button 
+                type="primary" 
+                size="large"
+                className="flex-1 bg-red-600 hover:bg-red-700 border-none h-11 sm:h-12 text-sm sm:text-base"
+                disabled={isArtisan}
+                onClick={() => {
+                  if (isArtisan) {
+                    Modal.warning({
+                      title: 'Akses Dibatasi',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.',
+                    })
+                    return
+                  }
+                  
+                  if (!isAuthenticated) {
+                    Modal.confirm({
+                      title: 'Login Diperlukan',
+                      icon: <ExclamationCircleOutlined />,
+                      content: 'Silakan login terlebih dahulu untuk memesan produk.',
+                      okText: 'Login',
+                      cancelText: 'Batal',
+                      okType: 'primary',
+                      onOk: () => {
+                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                      },
+                    })
+                    return
+                  }
+                  
+                  // Tambahkan produk ke cart dengan selected: true
+                  const existingItem = cartItems.find(item => item.id === product.id)
+                  if (existingItem) {
+                    // Jika sudah ada, update quantity dan set selected
+                    setCartItems(cartItems.map(item =>
+                      item.id === product.id
+                        ? { ...item, quantity: item.quantity + 1, selected: true }
+                        : item
+                    ))
+                  } else {
+                    // Jika belum ada, tambahkan dengan selected: true
+                    setCartItems([
+                      ...cartItems,
+                      {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price,
+                        quantity: 1,
+                        image: product.images[0],
+                        thumbnail: product.images[0],
+                        selected: true,
+                        seller: product.artisan.name,
+                      },
+                    ])
+                  }
+                  
+                  // Navigate ke checkout
+                  navigate('/checkout')
+                }}
+              >
+                Pesan Sekarang
               </Button>
             </div>
           </Card>
