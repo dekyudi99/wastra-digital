@@ -48,8 +48,8 @@ export const regencies = {
     { id: 'kota-kupang', name: 'Kota Kupang' },
   ],
 
-  // Bali (dipertahankan seperti sebelumnya karena cakupan utama Sidemen)
-  'bali': [
+  // Bali
+  bali: [
     { id: 'badung', name: 'Kabupaten Badung' },
     { id: 'bangli', name: 'Kabupaten Bangli' },
     { id: 'buleleng', name: 'Kabupaten Buleleng' },
@@ -104,7 +104,7 @@ export const districts = {
     { id: 'pemenang', name: 'Pemenang' },
     { id: 'bayan', name: 'Bayan' },
   ],
-  'sumbawa': [
+  sumbawa: [
     { id: 'sumbawa', name: 'Sumbawa' },
     { id: 'labuhan-badas', name: 'Labuhan Badas' },
     { id: 'unter-iwes', name: 'Unter Iwes' },
@@ -118,14 +118,14 @@ export const districts = {
     { id: 'jereweh', name: 'Jereweh' },
     { id: 'sekongkang', name: 'Sekongkang' },
   ],
-  'bima': [
+  bima: [
     { id: 'woha', name: 'Woha' },
     { id: 'belo', name: 'Belo' },
     { id: 'bolo', name: 'Bolo' },
     { id: 'madapangga', name: 'Madapangga' },
     { id: 'tambora', name: 'Tambora' },
   ],
-  'dompu': [
+  dompu: [
     { id: 'dompu', name: 'Dompu' },
     { id: 'kilo', name: 'Kilo' },
     { id: 'manggelewa', name: 'Manggelewa' },
@@ -147,137 +147,24 @@ export const districts = {
     { id: 'sandubaya', name: 'Sandubaya' },
   ],
 
-  // NTT (beberapa kecamatan utama per kabupaten/kota)
-  'alor': [
+  // NTT (contoh)
+  alor: [
     { id: 'teluk-mutiara', name: 'Teluk Mutiara' },
     { id: 'alor-barat-daya', name: 'Alor Barat Daya' },
     { id: 'alor-timur', name: 'Alor Timur' },
     { id: 'pulau-pura', name: 'Pulau Pura' },
     { id: 'pantar', name: 'Pantar' },
   ],
-  'belu': [
+  belu: [
     { id: 'atambua', name: 'Atambua' },
     { id: 'kakuluk-mesak', name: 'Kakuluk Mesak' },
     { id: 'lasiolat', name: 'Lasiolat' },
-    { id: 'raimat', name: 'Raimanuk' },
+    { id: 'raimanuk', name: 'Raimanuk' },
     { id: 'tasifeto-barat', name: 'Tasifeto Barat' },
   ],
-  'flores-timur': [
-    { id: 'larantuka', name: 'Larantuka' },
-    { id: 'adonkia', name: 'Adonara' },
-    { id: 'adonkia-tengah', name: 'Adonara Tengah' },
-    { id: 'solor-barat', name: 'Solor Barat' },
-    { id: 'solor-timur', name: 'Solor Timur' },
-  ],
-  'kupang': [
-    { id: 'kupang-timur', name: 'Kupang Timur' },
-    { id: 'kupang-barat', name: 'Kupang Barat' },
-    { id: 'kupang-tengah', name: 'Kupang Tengah' },
-    { id: 'kupang-utara', name: 'Kupang Utara' },
-    { id: 'amarasi', name: 'Amarasi' },
-  ],
-  'kota-kupang': [
-    { id: 'alak', name: 'Alak' },
-    { id: 'kelapa-lima', name: 'Kelapa Lima' },
-    { id: 'oebobo', name: 'Oebobo' },
-    { id: 'maulafa', name: 'Maulafa' },
-    { id: 'kota-raja', name: 'Kota Raja' },
-  ],
-  'manggarai-barat': [
-    { id: 'komodo', name: 'Komodo' },
-    { id: 'boleng', name: 'Boleng' },
-    { id: 'mbeliling', name: 'Mbeliling' },
-    { id: 'leragere', name: 'Lembor' },
-    { id: 'sano-nggoang', name: 'Sano Nggoang' },
-  ],
-  'manggarai': [
-    { id: 'langke-rembong', name: 'Langke Rembong' },
-    { id: 'ruteng', name: 'Ruteng' },
-    { id: 'reok', name: 'Reok' },
-    { id: 'cibal', name: 'Cibal' },
-  ],
-  'manggarai-timur': [
-    { id: 'borong', name: 'Borong' },
-    { id: 'lamba-ledo', name: 'Lamba Ledo' },
-    { id: 'kota-komba', name: 'Kota Komba' },
-    { id: 'sambi-rampas', name: 'Sambi Rampas' },
-  ],
-  'sumba-barat': [
-    { id: 'loli', name: 'Loli' },
-    { id: 'tana-righu', name: 'Tana Righu' },
-    { id: 'lamboya', name: 'Lamboya' },
-  ],
-  'sumba-barat-daya': [
-    { id: 'tambolaka', name: 'Tambolaka' },
-    { id: 'loura', name: 'Loura' },
-    { id: 'wewewa-timur', name: 'Wewewa Timur' },
-    { id: 'wewewa-barat', name: 'Wewewa Barat' },
-  ],
-  'sumba-tengah': [
-    { id: 'katikutana', name: 'Katikutana' },
-    { id: 'umbudaatana', name: 'Umbu Ratu Nggay' },
-    { id: 'mamboro', name: 'Mamboro' },
-  ],
-  'sumba-timur': [
-    { id: 'kota-waingapu', name: 'Kota Waingapu' },
-    { id: 'pahunga-lodu', name: 'Pahunga Lodu' },
-    { id: 'pandawai', name: 'Pandawai' },
-    { id: 'tabundung', name: 'Tabundung' },
-  ],
-  'ende': [
-    { id: 'ende-timur', name: 'Ende Timur' },
-    { id: 'ende-utara', name: 'Ende Utara' },
-    { id: 'ende-tengah', name: 'Ende Tengah' },
-    { id: 'pulau-ende', name: 'Pulau Ende' },
-  ],
-  'ngada': [
-    { id: 'bajawa', name: 'Bajawa' },
-    { id: 'golewa', name: 'Golewa' },
-    { id: 'riung', name: 'Riung' },
-  ],
-  'nagekeo': [
-    { id: 'boawae', name: 'Boawae' },
-    { id: 'aimere', name: 'Aimere' },
-    { id: 'maumere', name: 'Mauponggo' },
-  ],
-  'lembata': [
-    { id: 'nubatukan', name: 'Nubatukan' },
-    { id: 'buyasuri', name: 'Buyasuri' },
-    { id: 'omalolong', name: 'Omesuri' },
-  ],
-  'sikka': [
-    { id: 'maumere', name: 'Maumere' },
-    { id: 'alokit', name: 'Alok' },
-    { id: 'paga', name: 'Paga' },
-    { id: 'waiblama', name: 'Waiblama' },
-  ],
-  'rote-ndao': [
-    { id: 'lobalain', name: 'Lobalain' },
-    { id: 'pantai-barat', name: 'Pantai Barat' },
-    { id: 'pantai-timur', name: 'Pantai Timur' },
-    { id: 'ratu', name: 'Rote Tengah' },
-  ],
-  'sabu-raijua': [
-    { id: 'sabu-barat', name: 'Sabu Barat' },
-    { id: 'sabu-tengah', name: 'Sabu Tengah' },
-    { id: 'sabu-timur', name: 'Sabu Timur' },
-    { id: 'hawu-mehara', name: 'Hawu Mehara' },
-  ],
-  'timor-tengah-selatan': [
-    { id: 'soE', name: 'SoE' },
-    { id: 'mollo-utara', name: 'Mollo Utara' },
-    { id: 'mollo-selatan', name: 'Mollo Selatan' },
-    { id: 'noebeba', name: 'Noebeba' },
-  ],
-  'timor-tengah-utara': [
-    { id: 'kefamenanu', name: 'Kefamenanu' },
-    { id: 'insana', name: 'Insana' },
-    { id: 'bikomi', name: 'Bikomi Tengah' },
-    { id: 'biboki', name: 'Biboki Selatan' },
-  ],
 
-  // Bali (tetap, dengan fokus ke Karangasem/Sidemen)
-  'karangasem': [
+  // Bali (fokus Karangasem)
+  karangasem: [
     { id: 'abang', name: 'Abang' },
     { id: 'bebandem', name: 'Bebandem' },
     { id: 'karangasem', name: 'Karangasem' },
@@ -287,49 +174,46 @@ export const districts = {
     { id: 'selat', name: 'Selat' },
     { id: 'sidemen', name: 'Sidemen' },
   ],
-  'badung': [
-    { id: 'abiansemal', name: 'Abiansemal' },
-    { id: 'kuta', name: 'Kuta' },
-    { id: 'kuta-selatan', name: 'Kuta Selatan' },
-    { id: 'kuta-utara', name: 'Kuta Utara' },
-    { id: 'mengwi', name: 'Mengwi' },
-    { id: 'petang', name: 'Petang' },
-  ],
-  'denpasar': [
-    { id: 'denpasar-barat', name: 'Denpasar Barat' },
-    { id: 'denpasar-selatan', name: 'Denpasar Selatan' },
-    { id: 'denpasar-timur', name: 'Denpasar Timur' },
-    { id: 'denpasar-utara', name: 'Denpasar Utara' },
-  ],
 
-  // Jawa Timur (contoh kecamatan)
-  'surabaya': [
+  // Jawa Timur (contoh)
+  surabaya: [
     { id: 'surabaya-barat', name: 'Surabaya Barat' },
     { id: 'surabaya-selatan', name: 'Surabaya Selatan' },
     { id: 'surabaya-timur', name: 'Surabaya Timur' },
     { id: 'surabaya-utara', name: 'Surabaya Utara' },
     { id: 'surabaya-pusat', name: 'Surabaya Pusat' },
   ],
-  'malang': [
+  malang: [
     { id: 'klojen', name: 'Klojen' },
     { id: 'lowokwaru', name: 'Lowokwaru' },
     { id: 'sukun', name: 'Sukun' },
     { id: 'kedungkandang', name: 'Kedungkandang' },
     { id: 'blimbing', name: 'Blimbing' },
   ],
-  'sidoarjo': [
+  sidoarjo: [
     { id: 'sidoarjo', name: 'Sidoarjo' },
     { id: 'buduran', name: 'Buduran' },
     { id: 'candi', name: 'Candi' },
     { id: 'gedangan', name: 'Gedangan' },
     { id: 'tulangan', name: 'Tulangan' },
   ],
-  'gresik': [
+  gresik: [
     { id: 'gresik', name: 'Gresik' },
     { id: 'kebomas', name: 'Kebomas' },
     { id: 'manyar', name: 'Manyar' },
     { id: 'bungah', name: 'Bungah' },
     { id: 'driyorejo', name: 'Driyorejo' },
+  ],
+}
+
+// Dusun per kecamatan (khusus kebutuhan registrasi pengrajin)
+export const villages = {
+  selat: [
+    { id: 'tengah', name: 'Dusun Tengah' },
+    { id: 'sidakarya', name: 'Dusun Sidakarya' },
+    { id: 'budamanis', name: 'Dusun Budamanis' },
+    { id: 'tabola', name: 'Dusun Tabola' },
+    { id: 'guminten', name: 'Dusun Guminten' },
   ],
 }
 

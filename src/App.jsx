@@ -9,6 +9,7 @@ import LandingPage from './pages/LandingPage'
 import ProductCatalog from './pages/ProductCatalog'
 import ProductDetail from './pages/ProductDetail'
 import ArtisanProfile from './pages/ArtisanProfile'
+import ArtisanShop from './pages/ArtisanShop'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminProductManagement from './pages/AdminProductManagement'
 import AuthOnboarding from './pages/AuthOnboarding'
@@ -39,7 +40,7 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/produk" element={<ProductCatalog />} />
               <Route path="/produk/:id" element={<ProductDetail />} />
-              <Route path="/artisan/:id" element={<ArtisanProfile />} />
+              <Route path="/artisan/:id" element={<ArtisanShop />} />
               <Route 
                 path="/admin" 
                 element={

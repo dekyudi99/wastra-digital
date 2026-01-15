@@ -1,7 +1,24 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Form, Input, Select, message } from 'antd'
+import { Button, Card, Form, Input, Select, Upload, message } from 'antd'
+import { InboxOutlined } from '@ant-design/icons'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
+import { villages as importedVillages } from '../utils/indonesiaRegions'
+
+// Fallback villages jika import gagal
+const defaultVillages = {
+  'selat': [
+    { id: 'tengah', name: 'Dusun Tengah' },
+    { id: 'sidakarya', name: 'Dusun Sidakarya' },
+    { id: 'budamanis', name: 'Dusun Budamanis' },
+    { id: 'tabola', name: 'Dusun Tabola' },
+    { id: 'guminten', name: 'Dusun Guminten' },
+  ]
+}
+
+const villages = importedVillages || defaultVillages
+
+const { Dragger } = Upload
 
 const roleOptions = [
   { value: USER_ROLES.CUSTOMER, label: ROLE_LABELS_ID[USER_ROLES.CUSTOMER] },
@@ -13,6 +30,7 @@ const RegisterPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [loading, setLoading] = useState(false)
+  const [ktpFile, setKtpFile] = useState(null)
 
   const role = useMemo(() => {
     const fromQuery = params.get('role')
@@ -20,10 +38,48 @@ const RegisterPage = () => {
     return localStorage.getItem(AUTH_STORAGE_KEYS.ROLE) || USER_ROLES.CUSTOMER
   }, [params])
 
+  const isArtisan = role === USER_ROLES.ARTISAN
+
+  // Options untuk dropdown dusun - dengan fallback yang aman
+  const villageOptions = useMemo(() => {
+    if (!villages || !villages['selat']) {
+      return []
+    }
+    return villages['selat'].map(village => ({
+      value: village.id,
+      label: village.name,
+    }))
+  }, [])
+
   const onFinish = async (values) => {
     setLoading(true)
     try {
+      const isCurrentArtisan = values.role === USER_ROLES.ARTISAN
+      
+      // Validasi KTP untuk pengrajin
+      if (isCurrentArtisan && !ktpFile) {
+        message.error('Harap upload foto KTP Anda')
+        setLoading(false)
+        return
+      }
+
+      // Validasi dusun untuk pengrajin
+      if (isCurrentArtisan && !values.village) {
+        message.error('Harap pilih dusun Anda')
+        setLoading(false)
+        return
+      }
+
       // Simulasi register - dalam real app, ini akan call API
+      // Data yang akan dikirim: values + ktpFile (untuk pengrajin)
+      const registerData = {
+        ...values,
+        ...(isCurrentArtisan && {
+          ktp: ktpFile,
+          village: values.village,
+        }),
+      }
+
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Setelah daftar, arahkan ke halaman login agar pengguna masuk terlebih dulu
@@ -58,47 +114,122 @@ const RegisterPage = () => {
               </Form.Item>
 
               <Form.Item
-                name="name"
-                label={role === USER_ROLES.ARTISAN ? 'Nama Pengrajin' : role === USER_ROLES.ADMIN ? 'Nama Admin' : 'Nama Lengkap'}
-                rules={[{ required: true, message: 'Masukkan nama' }]}
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.role !== currentValues.role}
               >
-                <Input placeholder="Nama Anda" />
-              </Form.Item>
+                {({ getFieldValue }) => {
+                  const currentRole = getFieldValue('role') || role
+                  const isCurrentArtisan = currentRole === USER_ROLES.ARTISAN
+                  
+                  return (
+                    <>
+                      <Form.Item
+                        name="name"
+                        label={isCurrentArtisan ? 'Nama Pengrajin' : currentRole === USER_ROLES.ADMIN ? 'Nama Admin' : 'Nama Lengkap'}
+                        rules={[{ required: true, message: 'Masukkan nama' }]}
+                      >
+                        <Input placeholder="Nama Anda" />
+                      </Form.Item>
 
-              <Form.Item
-                name="email"
-                label="Email"
-                rules={[
-                  { required: true, message: 'Masukkan email' },
-                  { type: 'email', message: 'Format email tidak valid' },
-                ]}
-              >
-                <Input placeholder="nama@email.com" />
-              </Form.Item>
+                      <Form.Item
+                        name="email"
+                        label="Email"
+                        rules={[
+                          { required: true, message: 'Masukkan email' },
+                          { type: 'email', message: 'Format email tidak valid' },
+                        ]}
+                      >
+                        <Input placeholder="nama@email.com" />
+                      </Form.Item>
 
-              <Form.Item
-                name="password"
-                label="Kata Sandi"
-                rules={[{ required: true, message: 'Masukkan kata sandi' }]}
-              >
-                <Input.Password placeholder="Minimal 8 karakter" />
-              </Form.Item>
+                      <Form.Item
+                        name="password"
+                        label="Kata Sandi"
+                        rules={[{ required: true, message: 'Masukkan kata sandi' }]}
+                      >
+                        <Input.Password placeholder="Minimal 8 karakter" />
+                      </Form.Item>
 
-              <Form.Item
-                name="confirmPassword"
-                label="Konfirmasi Kata Sandi"
-                dependencies={['password']}
-                rules={[
-                  { required: true, message: 'Konfirmasi kata sandi' },
-                  ({ getFieldValue }) => ({
-                    validator(_, value) {
-                      if (!value || getFieldValue('password') === value) return Promise.resolve()
-                      return Promise.reject(new Error('Kata sandi tidak sama'))
-                    },
-                  }),
-                ]}
-              >
-                <Input.Password placeholder="Ulangi kata sandi" />
+                      <Form.Item
+                        name="confirmPassword"
+                        label="Konfirmasi Kata Sandi"
+                        dependencies={['password']}
+                        rules={[
+                          { required: true, message: 'Konfirmasi kata sandi' },
+                          ({ getFieldValue }) => ({
+                            validator(_, value) {
+                              if (!value || getFieldValue('password') === value) return Promise.resolve()
+                              return Promise.reject(new Error('Kata sandi tidak sama'))
+                            },
+                          }),
+                        ]}
+                      >
+                        <Input.Password placeholder="Ulangi kata sandi" />
+                      </Form.Item>
+
+                      {isCurrentArtisan && (
+                        <>
+                          <Form.Item
+                            name="village"
+                            label="Dusun"
+                            rules={[{ required: true, message: 'Pilih dusun' }]}
+                          >
+                            <Select 
+                              placeholder="Pilih dusun Anda"
+                              options={villageOptions}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            name="ktp"
+                            label="Upload KTP"
+                            rules={[{ required: true, message: 'Upload foto KTP Anda' }]}
+                            valuePropName="fileList"
+                            getValueFromEvent={(e) => {
+                              if (Array.isArray(e)) {
+                                return e
+                              }
+                              return e?.fileList
+                            }}
+                          >
+                            <Dragger
+                              name="ktp"
+                              accept="image/*"
+                              maxCount={1}
+                              beforeUpload={(file) => {
+                                // Validasi ukuran file (max 5MB)
+                                const isLt5M = file.size / 1024 / 1024 < 5
+                                if (!isLt5M) {
+                                  message.error('Ukuran file harus kurang dari 5MB!')
+                                  return Upload.LIST_IGNORE
+                                }
+                                // Validasi tipe file
+                                const isImage = file.type.startsWith('image/')
+                                if (!isImage) {
+                                  message.error('File harus berupa gambar!')
+                                  return Upload.LIST_IGNORE
+                                }
+                                setKtpFile(file)
+                                return false // Prevent auto upload
+                              }}
+                              onRemove={() => {
+                                setKtpFile(null)
+                              }}
+                            >
+                              <p className="ant-upload-drag-icon">
+                                <InboxOutlined />
+                              </p>
+                              <p className="ant-upload-text">Klik atau seret file ke sini untuk upload</p>
+                              <p className="ant-upload-hint">
+                                Upload foto KTP Anda (Format: JPG, PNG. Maksimal 5MB)
+                              </p>
+                            </Dragger>
+                          </Form.Item>
+                        </>
+                      )}
+                    </>
+                  )
+                }}
               </Form.Item>
 
               <Button

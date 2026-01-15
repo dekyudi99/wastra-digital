@@ -181,9 +181,11 @@ const ProductCatalog = () => {
                 <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-1 sm:mb-2 line-clamp-2 hover:text-wastra-brown-600 transition">
                   {product.name}
                 </h3>
-                <p className="text-gray-600 text-xs sm:text-sm mb-1 sm:mb-2">
-                  Toko: {product.artisan.name}
-                </p>
+                <Link to={`/artisan/${product.artisan.id}`} className="block mb-1 sm:mb-2">
+                  <p className="text-gray-600 text-xs sm:text-sm hover:text-wastra-brown-600 transition">
+                    Toko: {product.artisan.name}
+                  </p>
+                </Link>
                 <p className="text-base sm:text-lg md:text-xl font-bold text-wastra-red mb-2 sm:mb-3">
                   {formatPrice(product.price)}
                 </p>

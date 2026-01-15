@@ -43,13 +43,24 @@ const Header = () => {
     }
   }
 
-  const navLinkClass = (path) => {
-    const isActive = location.pathname === path
+  const navLinkClass = (path, exact = false) => {
+    let isActive = false
+    if (exact) {
+      isActive = location.pathname === path
+    } else {
+      // Untuk path yang lebih kompleks, gunakan startsWith
+      // Tapi pastikan tidak match dengan path yang lebih panjang
+      if (path === '/') {
+        isActive = location.pathname === '/'
+      } else {
+        isActive = location.pathname === path || location.pathname.startsWith(path + '/')
+      }
+    }
     return [
-      'text-sm font-medium transition-colors no-underline decoration-2 underline-offset-4 hover:underline',
+      'text-sm font-medium transition-colors decoration-2 underline-offset-4',
       isActive
-        ? 'text-wastra-brown-800 underline'
-        : 'text-wastra-brown-600 hover:text-wastra-brown-800',
+        ? 'text-wastra-brown-800 underline font-semibold'
+        : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline',
     ].join(' ')
   }
 
@@ -91,11 +102,11 @@ const Header = () => {
 
           <div className="flex items-center gap-3">
             <nav className="hidden md:flex items-center gap-4 mr-10">
-              <Link to="/" className={navLinkClass('/')}>Beranda</Link>
+              <Link to="/" className={navLinkClass('/', true)}>Beranda</Link>
               <Link to="/produk" className={navLinkClass('/produk')}>Katalog Produk</Link>
               {isArtisan && (
                 <>
-                  <Link to="/pengrajin" className={navLinkClass('/pengrajin')}>Dashboard</Link>
+                  <Link to="/pengrajin" className={navLinkClass('/pengrajin', true)}>Dashboard</Link>
                   <Link to="/pengrajin/produk" className={navLinkClass('/pengrajin/produk')}>Kelola Produk</Link>
                   <Link to="/pengrajin/pesanan" className={navLinkClass('/pengrajin/pesanan')}>Pesanan Masuk</Link>
                 </>
@@ -154,7 +165,7 @@ const Header = () => {
                     })
                     return
                   }
-                  navigate('/keranjang')
+                  navigate('/keranjang', { state: { from: location.pathname } })
                 }}
                 className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative"
               >
@@ -170,6 +181,21 @@ const Header = () => {
                 <Dropdown
                   overlay={
                     <Menu>
+                      <Menu.Item 
+                        key="profile"
+                        onClick={() => {
+                          if (isArtisan) {
+                            navigate('/pengrajin/profil')
+                          } else {
+                            navigate('/profil')
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <UserIcon className="w-4 h-4" />
+                          <span>Profil</span>
+                        </div>
+                      </Menu.Item>
                       <Menu.Item 
                         key="logout" 
                         danger
@@ -190,13 +216,6 @@ const Header = () => {
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      if (isArtisan) {
-                        navigate('/pengrajin/profil')
-                      } else {
-                        navigate('/profil')
-                      }
-                    }}
                     className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
                   >
                     {user?.avatar ? (

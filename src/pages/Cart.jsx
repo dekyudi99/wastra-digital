@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Card, Button, Checkbox, Modal } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
@@ -15,24 +15,33 @@ import { USER_ROLES } from '../utils/authRoles'
 
 const Cart = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { cartItems, toggleSelect, updateQuantity, removeItem } = useCart()
   const { hasRole } = useUser()
+  const modalShownRef = useRef(false)
   
   const isArtisan = hasRole(USER_ROLES.ARTISAN)
   
   // Show warning when artisan accesses cart page
   useEffect(() => {
-    if (isArtisan) {
+    if (isArtisan && !modalShownRef.current) {
+      modalShownRef.current = true
       Modal.warning({
         title: 'Akses Dibatasi',
         icon: <ExclamationCircleOutlined />,
         content: 'Pengrajin tidak dapat menggunakan keranjang belanja. Silakan gunakan akun pembeli untuk melakukan pembelian.',
         onOk: () => {
-          navigate('/produk')
+          // Kembali ke halaman sebelumnya jika ada di location state, jika tidak kembali ke beranda
+          const previousPath = location.state?.from
+          if (previousPath && previousPath !== '/keranjang') {
+            navigate(previousPath)
+          } else {
+            navigate('/')
+          }
         },
       })
     }
-  }, [isArtisan, navigate])
+  }, [isArtisan, navigate, location])
 
   // Hanya hitung total dari item yang dipilih
   const selectedItems = cartItems.filter(item => item.selected)
