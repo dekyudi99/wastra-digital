@@ -1,6 +1,6 @@
 import Header from './Header'
 import Footer from './Footer'
-import { useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
 const Layout = ({ children }) => {
@@ -37,7 +37,7 @@ const Layout = ({ children }) => {
         }`}
       >
         <div className="page-transition w-full">
-          {children}
+          <Outlet/>
         </div>
       </main>
 

@@ -1,189 +1,147 @@
-import { useEffect, useRef } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { Card, Button, Checkbox, Modal } from 'antd'
-import { ExclamationCircleOutlined } from '@ant-design/icons'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Card, Button, Checkbox, Spin, message } from 'antd'
 import { 
-  MinusIcon,
-  PlusIcon,
-  TrashIcon,
-  ShoppingBagIcon
+  MinusIcon, 
+  PlusIcon, 
+  TrashIcon, 
+  ShoppingBagIcon 
 } from '@heroicons/react/24/outline'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
 import { formatPrice } from '../utils/format'
-import { useCart } from '../contexts/CartContext'
-import { useUser } from '../contexts/UserContext'
-import { USER_ROLES } from '../utils/authRoles'
+import orderApi from '../api/OrderApi'
 
 const Cart = () => {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { cartItems, toggleSelect, updateQuantity, removeItem } = useCart()
-  const { hasRole } = useUser()
-  const modalShownRef = useRef(false)
+  const queryClient = useQueryClient()
   
-  const isArtisan = hasRole(USER_ROLES.ARTISAN)
-  
-  // Show warning when artisan accesses cart page
-  useEffect(() => {
-    if (isArtisan && !modalShownRef.current) {
-      modalShownRef.current = true
-      Modal.warning({
-        title: 'Akses Dibatasi',
-        icon: <ExclamationCircleOutlined />,
-        content: 'Pengrajin tidak dapat menggunakan keranjang belanja. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-        onOk: () => {
-          // Kembali ke halaman sebelumnya jika ada di location state, jika tidak kembali ke beranda
-          const previousPath = location.state?.from
-          if (previousPath && previousPath !== '/keranjang') {
-            navigate(previousPath)
-          } else {
-            navigate('/')
-          }
-        },
-      })
+  // State lokal untuk melacak item mana yang dicentang (selection)
+  const [selectedIds, setSelectedIds] = useState([])
+
+  // 1. FETCH DATA DARI API
+  const { data: cartResponse = [], isLoading, isError } = useQuery({
+    queryKey: ["myCart"],
+    queryFn: async () => {
+      const res = await orderApi.getCart()
+      return res.data // Mengambil data sesuai struktur response API Anda
     }
-  }, [isArtisan, navigate, location])
+  })
 
-  // Hanya hitung total dari item yang dipilih
-  const selectedItems = cartItems.filter(item => item.selected)
-  const subtotal = selectedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
-  const total = subtotal
+  const cartItems = cartResponse?.data || []
 
-  // Show restricted access message for artisan
-  if (isArtisan) {
-    return (
-      <div className="w-full bg-white min-h-screen pb-32">
-        <div className="container mx-auto px-4 sm:px-6 md:px-8 lg:px-12 xl:px-20 max-w-6xl py-6 sm:py-8">
-          {/* Header */}
-          <div className="mb-6 sm:mb-8">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-wastra-brown-800 mb-1 sm:mb-2">
-              Keranjang Belanja
-            </h1>
-          </div>
+  const plusMutation = useMutation({
+    mutationFn: (id) => orderApi.plusCart(id),
+    onSuccess: () => queryClient.invalidateQueries(['myCart']),
+  })
 
-          {/* Restricted Access Message */}
-          <div className="text-center py-12 sm:py-20 px-4">
-            <ExclamationCircleOutlined className="text-4xl sm:text-6xl text-wastra-brown-300 mx-auto mb-4 sm:mb-6" style={{ fontSize: '48px' }} />
-            <h2 className="text-xl sm:text-2xl font-semibold text-wastra-brown-800 mb-2 sm:mb-3">
-              Akses Dibatasi
-            </h2>
-            <p className="text-sm sm:text-base text-wastra-brown-600 mb-6 sm:mb-8 max-w-md mx-auto px-4">
-              Pengrajin tidak dapat menggunakan keranjang belanja. Silakan gunakan akun pembeli untuk melakukan pembelian.
-            </p>
-            <Button
-              size="large"
-              className="bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-11 sm:h-12 px-6 sm:px-8 rounded-lg font-medium text-sm sm:text-base"
-              onClick={() => navigate('/produk')}
-            >
-              Kembali ke Katalog
-            </Button>
-          </div>
-        </div>
-      </div>
+  const minusMutation = useMutation({
+    mutationFn: (id) => orderApi.minusCart(id),
+    onSuccess: () => queryClient.invalidateQueries(['myCart']),
+    onError: (err) => {
+      message.error(err.response?.data?.message)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => orderApi.deleteCart(id),
+    onSuccess: () => {
+      message.success('Item dihapus')
+      queryClient.invalidateQueries(['myCart'])
+    },
+  })
+
+  // 3. LOGIKA SELECTION & PERHITUNGAN
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     )
   }
+
+  const selectedItems = cartItems.filter(item => selectedIds.includes(item.id))
+  // Gunakan item.product.last_price sesuai JSON API
+  const total = selectedItems.reduce((sum, item) => sum + (item.product.last_price * item.quantity), 0)
+
+
+  if (isLoading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Spin size="large" tip="Memuat Keranjang..." />
+    </div>
+  )
 
   return (
     <div className="w-full bg-white min-h-screen pb-24 sm:pb-32 overflow-x-hidden">
       <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 max-w-6xl mx-auto py-4 sm:py-6 md:py-8">
-        {/* Header */}
         <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-wastra-brown-800 mb-1 sm:mb-2">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-light text-wastra-brown-800 mb-1">
             Keranjang Belanja
           </h1>
-          <p className="text-sm sm:text-base text-wastra-brown-600">
-            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} di keranjang Anda
+          <p className="text-sm text-wastra-brown-600">
+            {cartItems.length} item di keranjang Anda
           </p>
         </div>
 
-        {/* Cart Items */}
         {cartItems.length === 0 ? (
-          <div className="text-center py-12 sm:py-20 px-4">
-            <ShoppingBagIcon className="w-16 h-16 sm:w-24 sm:h-24 text-wastra-brown-300 mx-auto mb-4 sm:mb-6" />
-            <h2 className="text-xl sm:text-2xl font-light text-wastra-brown-800 mb-2">
-              Keranjang Anda Kosong
-            </h2>
-            <p className="text-sm sm:text-base text-wastra-brown-600 mb-6 sm:mb-8">
-              Mulai berbelanja dan tambahkan produk ke keranjang
-            </p>
+          <div className="text-center py-20">
+            <ShoppingBagIcon className="w-20 h-20 text-gray-300 mx-auto mb-4" />
+            <h2 className="text-xl font-light mb-6">Keranjang Anda Kosong</h2>
             <Link to="/produk">
-              <Button 
-                size="large"
-                className="bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-11 sm:h-12 px-6 sm:px-8 rounded-lg font-medium text-sm sm:text-base"
-              >
-                Jelajahi Produk
-              </Button>
+              <Button size="large" className="bg-amber-800 text-white border-none">Jelajahi Produk</Button>
             </Link>
           </div>
         ) : (
-          <div className="space-y-3 sm:space-y-4">
+          <div className="space-y-4">
             {cartItems.map((item) => (
               <Card
                 key={item.id}
-                className={`bg-white border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all ${
-                  item.selected 
-                    ? 'border-wastra-brown-400 bg-wastra-brown-50/30' 
-                    : 'border-wastra-brown-100'
+                className={`border rounded-xl transition-all ${
+                  selectedIds.includes(item.id) ? 'border-amber-500 bg-amber-50/20' : 'border-gray-100'
                 }`}
                 bodyStyle={{ padding: '12px' }}
               >
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
-                  {/* Checkbox */}
-                  <div className="flex-shrink-0">
-                    <Checkbox
-                      checked={item.selected}
-                      onChange={() => toggleSelect(item.id)}
-                      className="w-4 h-4 sm:w-5 sm:h-5"
+                <div className="flex flex-col sm:flex-row gap-4 items-center">
+                  <Checkbox
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                  />
+
+                  {/* Image dari API: item.product.image_url[0] */}
+                  <div className="w-24 h-24 flex-shrink-0 bg-gray-50 rounded-lg overflow-hidden">
+                    <img 
+                      src={item.product.image_url?.[0]} 
+                      alt={item.product.name}
+                      className="w-full h-full object-cover"
                     />
                   </div>
 
-                  {/* Thumbnail */}
-                  <div className="flex-shrink-0">
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-wastra-brown-50 rounded-lg overflow-hidden border border-wastra-brown-100">
-                      <img 
-                        src={item.thumbnail} 
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="flex-1 min-w-0 w-full sm:w-auto">
-                    <h3 className="text-base sm:text-lg font-semibold text-wastra-brown-800 mb-1 sm:mb-2 line-clamp-2">
-                      {item.name}
-                    </h3>
-                    <p className="text-lg sm:text-xl font-bold text-wastra-brown-600 mb-2 sm:mb-3">
-                      {formatPrice(item.price)}
+                  <div className="flex-1 min-w-0 w-full">
+                    <h3 className="text-lg font-semibold truncate">{item.product.name}</h3>
+                    <p className="text-amber-700 font-bold">
+                      {formatPrice(item.product.last_price)}
                     </p>
                     
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-3 mt-2">
                       <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-wastra-brown-50 border border-wastra-brown-200 text-wastra-brown-700 hover:bg-wastra-brown-100 flex items-center justify-center transition-colors"
-                        aria-label="Kurangi jumlah"
+                        onClick={() => minusMutation.mutate(item.id)}
+                        disabled={item.quantity <= 1 || minusMutation.isLoading}
+                        className="p-1 rounded-full border hover:bg-gray-100 disabled:opacity-30"
                       >
-                        <MinusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <MinusIcon className="w-4 h-4" />
                       </button>
-                      <span className="text-base sm:text-lg font-semibold text-wastra-brown-800 min-w-[1.5rem] sm:min-w-[2rem] text-center">
-                        {item.quantity}
-                      </span>
+                      <span className="font-bold">{item.quantity}</span>
                       <button
-                        type="button"
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-wastra-brown-50 border border-wastra-brown-200 text-wastra-brown-700 hover:bg-wastra-brown-100 flex items-center justify-center transition-colors"
-                        aria-label="Tambah jumlah"
+                        onClick={() => plusMutation.mutate(item.id)}
+                        disabled={plusMutation.isLoading}
+                        className="p-1 rounded-full border hover:bg-gray-100"
                       >
-                        <PlusIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <PlusIcon className="w-4 h-4" />
                       </button>
+
                       <button
-                        type="button"
-                        onClick={() => removeItem(item.id)}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 flex items-center justify-center transition-colors ml-1 sm:ml-2"
-                        aria-label="Hapus item"
+                        onClick={() => deleteMutation.mutate(item.id)}
+                        className="ml-auto p-2 text-red-500 hover:bg-red-50 rounded-full"
                       >
-                        <TrashIcon className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <TrashIcon className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
@@ -196,45 +154,20 @@ const Cart = () => {
 
       {/* Sticky Bottom Summary */}
       {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-wastra-brown-200 shadow-lg z-50">
-          <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 max-w-6xl py-3 sm:py-4 md:py-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4">
-              <div className="flex-1 w-full min-w-0">
-                <div className="flex items-center justify-between mb-1 sm:mb-2 gap-2">
-                  <span className="text-sm sm:text-base md:text-lg text-wastra-brown-600 truncate">
-                    Total {selectedItems.length > 0 && `(${selectedItems.length})`}
-                  </span>
-                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-wastra-brown-800 whitespace-nowrap">
-                    {formatPrice(total)}
-                  </span>
-                </div>
-                {selectedItems.length === 0 && (
-                  <p className="text-xs sm:text-sm text-wastra-brown-500">
-                    Pilih produk untuk melihat total harga
-                  </p>
-                )}
-              </div>
-              <div className="w-full sm:w-auto flex-shrink-0">
-                <Button
-                  size="large"
-                  className="w-full sm:w-auto bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white border-none h-10 sm:h-11 md:h-12 px-6 sm:px-8 md:px-12 rounded-lg font-medium text-xs sm:text-sm md:text-base"
-                  disabled={selectedItems.length === 0 || isArtisan}
-                  onClick={() => {
-                    if (isArtisan) {
-                      Modal.warning({
-                        title: 'Akses Dibatasi',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-                      })
-                      return
-                    }
-                    navigate('/checkout')
-                  }}
-                >
-                  Checkout
-                </Button>
-              </div>
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 shadow-2xl z-50">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div>
+              <p className="text-gray-500">Total {selectedIds.length > 0 && `(${selectedIds.length})`}</p>
+              <h2 className="text-2xl font-bold text-amber-900">{formatPrice(total)}</h2>
             </div>
+            <Button
+              size="large"
+              className="bg-amber-800 text-white px-12 h-12 rounded-lg"
+              disabled={selectedIds.length === 0}
+              onClick={() => navigate('/checkout', { state: { items: selectedItems, total } })}
+            >
+              Checkout
+            </Button>
           </div>
         </div>
       )}
@@ -243,4 +176,3 @@ const Cart = () => {
 }
 
 export default Cart
-

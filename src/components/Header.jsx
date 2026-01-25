@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Input, Avatar, Modal, Dropdown, Menu } from 'antd'
+import { Input, Avatar, Modal, Dropdown, Menu, message, Spin } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   BellIcon, 
@@ -15,6 +15,10 @@ import {
 import { useUser } from '../contexts/UserContext'
 import { useCart } from '../contexts/CartContext'
 import { USER_ROLES } from '../utils/authRoles'
+import { useMutation } from '@tanstack/react-query'
+import authApi from '../api/AuthApi'
+import { useQuery } from '@tanstack/react-query'
+import orderApi from '../api/OrderApi'
 
 const Header = () => {
   const location = useLocation()
@@ -22,9 +26,28 @@ const Header = () => {
   const [searchValue, setSearchValue] = useState('')
   const { user, isAuthenticated, hasRole, logout } = useUser()
   const { cartItems } = useCart()
+
+  const logoutMutation = useMutation({
+    mutationFn: authApi.logout,
+    onSuccess: () => {
+      logout() // bersihkan context + localStorage
+      message.success('Berhasil logout')
+      navigate('/', { replace: true })
+    },
+    onError: () => {
+      // Bahkan kalau API gagal, tetap logout di client
+      logout()
+      navigate('/', { replace: true })
+    },
+  })
+
+  const {data: cartount, isLoading, isError} = useQuery({
+    queryKey: ["cartCount"],
+    queryFn: orderApi.cartCount,
+  })
   
   // Hanya tampilkan cart count jika user sudah login
-  const cartCount = isAuthenticated ? cartItems.length : 0
+  const cartCount = cartount?.data?.data?.total
   const isArtisan = hasRole(USER_ROLES.ARTISAN)
   const isAdmin = hasRole(USER_ROLES.ADMIN)
   const isCustomer = hasRole(USER_ROLES.CUSTOMER)
@@ -146,7 +169,6 @@ const Header = () => {
               >
                 <BellIcon className="w-5 h-5" />
               </button>
-              
 
               <button
                 type="button"
@@ -165,14 +187,18 @@ const Header = () => {
                     })
                     return
                   }
-                  navigate('/keranjang', { state: { from: location.pathname } })
+                  navigate('/keranjang')
                 }}
                 className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative"
               >
                 <ShoppingBagIcon className="w-5 h-5" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
-                    {cartCount}
+                    {isLoading?
+                      <Spin size='small'/>
+                      :
+                      cartCount
+                    }
                   </span>
                 )}
               </button>
@@ -196,12 +222,21 @@ const Header = () => {
                           <span>Profil</span>
                         </div>
                       </Menu.Item>
-                      <Menu.Item 
-                        key="logout" 
+                      <Menu.Item
+                        key="logout"
                         danger
                         onClick={() => {
-                          logout()
-                          navigate('/')
+                          Modal.confirm({
+                            title: 'Konfirmasi Logout',
+                            icon: <ExclamationCircleOutlined />,
+                            content: 'Apakah Anda yakin ingin keluar?',
+                            okText: 'Keluar',
+                            cancelText: 'Batal',
+                            okType: 'danger',
+                            onOk: () => {
+                              logoutMutation.mutate()
+                            },
+                          })
                         }}
                       >
                         <div className="flex items-center gap-2">

@@ -1,337 +1,213 @@
-import { useState, useEffect } from 'react'
-import { Link, useSearchParams, useNavigate } from 'react-router-dom'
-import { Card, Row, Col, Input, Select, Button, Tag, Modal, message } from 'antd'
+import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import { Card, Row, Col, Input, Select, Button, Tag, Modal, message, Spin } from 'antd'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
-import { 
-  MagnifyingGlassIcon,
+import {
+  ShoppingCartIcon,
   FunnelIcon,
-  ShoppingCartIcon
 } from '@heroicons/react/24/outline'
-import { formatPrice } from '../utils/format'
-import { mockProducts } from '../utils/mockProducts'
-import { useCart } from '../contexts/CartContext'
+
+import productApi from '../api/ProductApi'
 import { useUser } from '../contexts/UserContext'
 import { USER_ROLES } from '../utils/authRoles'
+import { formatPrice } from '../utils/format'
+import orderApi from '../api/OrderApi'
 
 const { Search } = Input
 const { Option } = Select
 
+const PRICE_MAP = {
+  low: '0-500000',
+  medium: '500000-1000000',
+  high: '1000000+',
+}
+
 const ProductCatalog = () => {
   const navigate = useNavigate()
-  const { cartItems, setCartItems } = useCart()
-  const { isAuthenticated, hasRole } = useUser()
   const [searchParams, setSearchParams] = useSearchParams()
-  
+
+  const { isAuthenticated, hasRole } = useUser()
+
   const isArtisan = hasRole(USER_ROLES.ARTISAN)
-  const searchQuery = searchParams.get('search') || ''
-  
-  const [filters, setFilters] = useState({
-    search: searchQuery,
-    category: 'all',
-    priceRange: 'all',
+
+  // 🔑 SOURCE OF TRUTH DARI URL
+  const search = searchParams.get('search') || ''
+  const category = searchParams.get('category') || 'all'
+  const price = searchParams.get('price') || 'all'
+  const queryClient = useQueryClient()
+
+  // 🔑 QUERY KE BACKEND
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', search, category, price],
+    queryFn: async () => {
+      const res = await productApi.get({
+        search: search || undefined,
+        category: category !== 'all' ? category : undefined,
+        price: price !== 'all' ? PRICE_MAP[price] : undefined,
+      })
+      return res.data.data || []
+    },
   })
 
-  // Update filter search ketika query parameter berubah
-  useEffect(() => {
-    setFilters(prev => ({
-      ...prev,
-      search: searchQuery
-    }))
-  }, [searchQuery])
+  const addCart = useMutation({
+    mutationFn: ({ id, quantity }) =>
+      orderApi.addCart(id, quantity),
+    onSuccess: () => {
+      message.success('Produk ditambahkan ke keranjang')
+      queryClient.invalidateQueries({ queryKey: ["cartCount"] })
+    },
+    onError: (error) => {
+      message.error(
+        error?.response?.data?.message || 'Gagal menambahkan ke keranjang'
+      )
+    },
+  })
 
-  const products = mockProducts
+  const updateParams = (key, value) => {
+    const params = Object.fromEntries(searchParams.entries())
 
-  // Filter products berdasarkan search, category, dan priceRange
-  const filteredProducts = products.filter((product) => {
-    // Filter berdasarkan pencarian (nama produk atau artisan)
-    const matchesSearch = filters.search === '' || 
-      product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-      (product.artisan?.name || '').toLowerCase().includes(filters.search.toLowerCase())
-
-    // Filter berdasarkan kategori
-    const matchesCategory = filters.category === 'all' || 
-      product.category === filters.category
-
-    // Filter berdasarkan rentang harga
-    let matchesPriceRange = true
-    if (filters.priceRange !== 'all') {
-      switch (filters.priceRange) {
-        case 'low':
-          matchesPriceRange = product.price >= 0 && product.price <= 500000
-          break
-        case 'medium':
-          matchesPriceRange = product.price > 500000 && product.price <= 1000000
-          break
-        case 'high':
-          matchesPriceRange = product.price > 1000000
-          break
-        default:
-          matchesPriceRange = true
-      }
+    if (!value || value === 'all') {
+      delete params[key]
+    } else {
+      params[key] = value
     }
 
-    return matchesSearch && matchesCategory && matchesPriceRange
-  })
+    setSearchParams(params)
+  }
 
   return (
-    <div className="w-full bg-white overflow-x-hidden">
-      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 max-w-7xl mx-auto py-3 sm:py-4 md:py-6 lg:py-8">
-        <div className="mb-4 sm:mb-6 md:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">Katalog Produk</h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600">
-            Temukan koleksi kain tradisional endek dan songket dari pengrajin 
-            terbaik Desa Sidemen
+    <div className="w-full bg-white">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* HEADER */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold">Katalog Produk</h1>
+          <p className="text-gray-600">
+            Temukan produk kain tradisional terbaik
           </p>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg shadow-md mb-4 sm:mb-6 md:mb-8">
-          <div className="flex items-center gap-2 mb-3 sm:mb-4">
-            <FunnelIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            <h2 className="text-base sm:text-lg font-semibold">Filter Produk</h2>
+        {/* FILTER */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <FunnelIcon className="w-5 h-5 text-gray-600" />
+            <h2 className="font-semibold">Filter Produk</h2>
           </div>
-          <Row gutter={[8, 8]} className="!mx-0">
-            <Col xs={24} sm={12} md={8} className="!px-2 sm:!px-2 md:!px-3">
+
+          <Row gutter={[12, 12]}>
+            <Col xs={24} md={8}>
               <Search
                 placeholder="Cari produk..."
                 allowClear
-                enterButton
-                size="large"
-                value={filters.search}
-                prefix={<MagnifyingGlassIcon className="w-5 h-5" />}
-                onChange={(e) => {
-                  const value = e.target.value
-                  setFilters({ ...filters, search: value })
-                  // Update URL query parameter
-                  if (value) {
-                    setSearchParams({ search: value })
-                  } else {
-                    setSearchParams({})
-                  }
-                }}
-                onSearch={value => {
-                  setFilters({ ...filters, search: value })
-                  // Update URL query parameter
-                  if (value) {
-                    setSearchParams({ search: value })
-                  } else {
-                    setSearchParams({})
-                  }
-                }}
+                value={search}
+                onChange={(e) => updateParams('search', e.target.value)}
+                onSearch={(value) => updateParams('search', value)}
               />
             </Col>
-            <Col xs={24} sm={12} md={8}>
+
+            <Col xs={24} md={8}>
               <Select
-                placeholder="Kategori"
-                size="large"
                 className="w-full"
-                value={filters.category}
-                onChange={(value) => 
-                  setFilters({ ...filters, category: value })
-                }
+                value={category}
+                onChange={(value) => updateParams('category', value)}
               >
                 <Option value="all">Semua Kategori</Option>
-                <Option value="endek">Endek</Option>
-                <Option value="songket">Songket</Option>
+                <Option value="Endek">Endek</Option>
+                <Option value="Songket">Songket</Option>
               </Select>
             </Col>
-            <Col xs={24} sm={12} md={8}>
+
+            <Col xs={24} md={8}>
               <Select
-                placeholder="Rentang Harga"
-                size="large"
                 className="w-full"
-                value={filters.priceRange}
-                onChange={(value) => 
-                  setFilters({ ...filters, priceRange: value })
-                }
+                value={price}
+                onChange={(value) => updateParams('price', value)}
               >
                 <Option value="all">Semua Harga</Option>
-                <Option value="low">Rp 0 - Rp 500.000</Option>
-                <Option value="medium">Rp 500.000 - Rp 1.000.000</Option>
+                <Option value="low">Rp 0 - 500.000</Option>
+                <Option value="medium">Rp 500.000 - 1.000.000</Option>
                 <Option value="high">Rp 1.000.000+</Option>
               </Select>
             </Col>
           </Row>
         </div>
 
-        {/* Products Grid */}
-        <Row gutter={[8, 12]} className="!mx-0" justify="start">
-        {filteredProducts.map((product) => (
-          <Col xs={24} sm={12} md={8} lg={6} key={product.id} className="!px-2 sm:!px-2 md:!px-3">
-            <Card
-              hoverable
-              cover={
-                <Link to={`/produk/${product.id}`} className="block">
-                  <div className="h-40 sm:h-48 md:h-56 lg:h-64 bg-gray-200 flex items-center justify-center cursor-pointer hover:opacity-90 transition">
-                    <span className="text-gray-400 text-xs sm:text-sm text-center px-2">
-                      {product.name}
-                    </span>
-                  </div>
-                </Link>
-              }
-              className="h-full w-full flex flex-col"
-              bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '12px' }}
-            >
-              <Link to={`/produk/${product.id}`} className="flex-1">
-                <div className="mb-1 sm:mb-2">
-                  <Tag color={product.category === 'endek' ? 'blue' : 'gold'} className="text-xs">
-                    {product.category === 'endek' ? 'Endek' : 'Songket'}
-                  </Tag>
-                </div>
-                <h3 className="text-sm sm:text-base md:text-lg font-semibold mb-1 sm:mb-2 line-clamp-2 hover:text-wastra-brown-600 transition">
-                  {product.name}
-                </h3>
-                <Link to={`/artisan/${product.artisan.id}`} className="block mb-1 sm:mb-2">
-                  <p className="text-gray-600 text-xs sm:text-sm hover:text-wastra-brown-600 transition">
-                    Toko: {product.artisan.name}
-                  </p>
-                </Link>
-                <p className="text-base sm:text-lg md:text-xl font-bold text-wastra-red mb-2 sm:mb-3">
-                  {formatPrice(product.price)}
-                </p>
-              </Link>
-              <div className="flex flex-col gap-2 mt-auto">
-                <Button
-                  type="default"
-                  block
-                  icon={<ShoppingCartIcon className="w-4 h-4" />}
-                  className="border-wastra-brown-600 text-wastra-brown-600 hover:bg-wastra-brown-50 h-9 sm:h-10 md:h-11 text-xs sm:text-sm"
-                  disabled={isArtisan}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    
-                    if (isArtisan) {
-                      Modal.warning({
-                        title: 'Akses Dibatasi',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Pengrajin tidak dapat menambahkan produk ke keranjang. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-                      })
-                      return
-                    }
-                    
-                    if (!isAuthenticated) {
-                      Modal.confirm({
-                        title: 'Login Diperlukan',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-                        okText: 'Login',
-                        cancelText: 'Batal',
-                        okType: 'primary',
-                        onOk: () => {
-                          navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
-                        },
-                      })
-                      return
-                    }
-                    
-                    // Tambahkan produk ke cart tanpa selected (tidak langsung checkout)
-                    const existingItem = cartItems.find(item => item.id === product.id)
-                    if (existingItem) {
-                      // Jika sudah ada, update quantity saja
-                      setCartItems(cartItems.map(item =>
-                        item.id === product.id
-                          ? { ...item, quantity: item.quantity + 1 }
-                          : item
-                      ))
-                    } else {
-                      // Jika belum ada, tambahkan dengan selected: false
-                      setCartItems([
-                        ...cartItems,
-                        {
-                          id: product.id,
-                          name: product.name,
-                          price: product.price,
-                          quantity: 1,
-                          image: product.images?.[0] || '',
-                          thumbnail: product.images?.[0] || '',
-                          selected: false,
-                          seller: product.artisan.name,
-                        },
-                      ])
-                    }
-                    
-                    message.success('Produk berhasil ditambahkan ke keranjang!')
-                  }}
+        {/* PRODUCT GRID */}
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <Row gutter={[16, 16]}>
+            {products.map((product) => (
+              <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+                <Card
+                  hoverable
+                  cover={
+                    <Link to={`/produk/${product.id}`}>
+                      <img
+                        src={product.image_url?.[0]}
+                        alt={product.name}
+                        className="h-48 w-full object-cover"
+                      />
+                    </Link>
+                  }
                 >
-                  Tambah ke Keranjang
-                </Button>
-                <Button
-                  type="primary"
-                  block
-                  className="bg-red-600 hover:bg-red-700 border-none h-9 sm:h-10 md:h-11 text-xs sm:text-sm"
-                  disabled={isArtisan}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    
-                    if (isArtisan) {
-                      Modal.warning({
-                        title: 'Akses Dibatasi',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-                      })
-                      return
-                    }
-                    
-                    if (!isAuthenticated) {
-                      Modal.confirm({
-                        title: 'Login Diperlukan',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Silakan login terlebih dahulu untuk memesan produk.',
-                        okText: 'Login',
-                        cancelText: 'Batal',
-                        okType: 'primary',
-                        onOk: () => {
-                          navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
-                        },
-                      })
-                      return
-                    }
-                    
-                    // Tambahkan produk ke cart dengan selected: true
-                    const existingItem = cartItems.find(item => item.id === product.id)
-                    if (existingItem) {
-                      // Jika sudah ada, update quantity dan set selected
-                      setCartItems(cartItems.map(item =>
-                        item.id === product.id
-                          ? { ...item, quantity: item.quantity + 1, selected: true }
-                          : item
-                      ))
-                    } else {
-                      // Jika belum ada, tambahkan dengan selected: true
-                      setCartItems([
-                        ...cartItems,
-                        {
-                          id: product.id,
-                          name: product.name,
-                          price: product.price,
-                          quantity: 1,
-                          image: product.images?.[0] || '',
-                          thumbnail: product.images?.[0] || '',
-                          selected: true,
-                          seller: product.artisan.name,
-                        },
-                      ])
-                    }
-                    
-                    // Navigate ke checkout
-                    navigate('/checkout')
-                  }}
-                >
-                  Pesan Sekarang
-                </Button>
-              </div>
-            </Card>
-          </Col>
-        ))}
-      </Row>
+                  <Tag color="blue">{product.category}</Tag>
 
-        {filteredProducts.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-wastra-light-medium text-lg">
-              Tidak ada produk yang ditemukan
-            </p>
+                  <h3 className="font-semibold mt-2 line-clamp-2">
+                    {product.name}
+                  </h3>
+
+                  <p className="text-lg font-bold text-red-600 mt-1">
+                    {formatPrice(product.last_price)}
+                  </p>
+
+                  <Button
+                    block
+                    className="mt-3"
+                    icon={<ShoppingCartIcon className="w-4 h-4" />}
+                    disabled={isArtisan || addCart.isLoading}
+                    onClick={() => {
+                      if (isArtisan) {
+                        Modal.warning({
+                          title: 'Akses Dibatasi',
+                          icon: <ExclamationCircleOutlined />,
+                          content: 'Pengrajin tidak dapat membeli produk.',
+                        })
+                        return
+                      }
+
+                      if (!isAuthenticated) {
+                        Modal.confirm({
+                          title: 'Login Diperlukan',
+                          onOk: () =>
+                            navigate(
+                              `/onboarding?redirect=${encodeURIComponent(
+                                `/produk/${product.id}`
+                              )}`
+                            ),
+                        })
+                        return
+                      }
+
+                      addCart.mutate({
+                        id: product.id,
+                        quantity: 1,
+                      })
+                    }}
+                  >
+                    Tambah ke Keranjang
+                  </Button>
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+
+        {!isLoading && products.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            Tidak ada produk ditemukan
           </div>
         )}
       </div>
@@ -340,4 +216,3 @@ const ProductCatalog = () => {
 }
 
 export default ProductCatalog
-

@@ -33,5 +33,3 @@ export function useRevealOnScroll({
     return () => io.disconnect()
   }, [selector, rootMargin, threshold])
 }
-
-

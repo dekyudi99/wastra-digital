@@ -11,15 +11,34 @@ import {
 import { useRevealOnScroll } from '../utils/useRevealOnScroll'
 import endekImg from '../assets/endek.jpg'
 import songketImg from '../assets/songket.jpg'
+import { useQuery } from '@tanstack/react-query'
+import productApi from '../api/ProductApi'
 
 const LandingPage = () => {
   useRevealOnScroll()
+  const {data: songket, isLoading: loadingSongket} = useQuery({
+    queryKey: ['songket'],
+    queryFn: productApi.songket,
+    staleTime: Infinity,
+  })
+
+  const {data: endek, isLoading: loadingEndek} = useQuery({
+    queryKey: ['endek'],
+    queryFn: productApi.endek,
+    staleTime: Infinity,
+  })
+  
+  const {data: product, isLoading, isError, error} = useQuery({
+    queryKey: ["product"],
+    queryFn: productApi.get,
+    staleTime: Infinity,
+  })
 
   const categories = [
     {
       id: 1,
       name: 'Kain Endek',
-      count: 24,
+      count: loadingEndek? 'Memuat...' : endek?.data?.data?.total || 0,
       image: endekImg,
       overlayFrom: 'from-wastra-brown-700/70',
       overlayVia: 'via-wastra-brown-600/35',
@@ -30,7 +49,7 @@ const LandingPage = () => {
     {
       id: 2,
       name: 'Kain Songket',
-      count: 18,
+      count: loadingSongket? 'Memuat...' : songket?.data?.data?.total || 0,
       image: songketImg,
       overlayFrom: 'from-wastra-brown-600/60',
       overlayVia: 'via-wastra-brown-500/30',
@@ -194,7 +213,70 @@ const LandingPage = () => {
           <div className="w-full overflow-hidden">
             <div className="px-16 sm:px-20 md:px-24 lg:px-28 xl:px-32 2xl:px-40">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 justify-items-center">
-            {featuredProducts.map((product) => (
+                {
+                  isLoading?
+                  <p className='text-center text-black p-4'>Memuat...</p>
+                  :
+                  isError?
+                  <p className='text-center text-red-600'>{error?.message}</p>
+                  :
+                  product?.data?.data?.length === 0?
+                  <p className='text-center text-black p-4'>Tidak ada produk tersedia!</p>
+                  :
+                  product?.data?.data.map((product)=>(
+                    <Link
+                      key={product.id}
+                      to={`/produk/${product.id}`}
+                      className="block no-underline hover:no-underline w-full"
+                    >
+                      <Card
+                        hoverable
+                        className="bg-white border border-wastra-brown-100 rounded-xl overflow-hidden transition-all hover:shadow-lg h-full flex flex-col w-full"
+                        bodyStyle={{ padding: '16px 16px 18px 16px' }}
+                        cover={
+                          <div className="bg-wastra-brown-50 h-40 flex items-center justify-center" style={{ backgroundImage: `url(${product.image_url[0]})` }}>
+                            {/* <div className="w-20 h-20 bg-wastra-brown-200 rounded-lg flex items-center justify-center" >
+                              <SparklesIcon className="w-10 h-10 text-wastra-brown-400" />
+                            </div> */}
+                          </div>
+                        }
+                      >
+                        <div className="py-2 flex flex-col gap-1.5 h-full">
+                          {product.discount && (
+                            <span className="inline-block bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full w-fit mb-1">
+                              -{product.discount}% OFF
+                            </span>
+                          )}
+                          <h3 className="font-medium text-wastra-brown-800 text-sm leading-snug line-clamp-2 min-h-[2.25rem]">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-center gap-2">
+                            <div className="flex">
+                              {[1,2,3,4,5].map(i => (
+                                <svg key={i} className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                </svg>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="mt-auto flex items-center justify-between pt-2">
+                            <p className="text-lg font-semibold text-wastra-brown-800 leading-tight">
+                              {formatPrice(product.last_price)}
+                            </p>
+                            <button
+                              type="button"
+                              className="w-10 h-10 bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white rounded-full flex items-center justify-center transition-colors"
+                              aria-label="Tambah ke keranjang"
+                            >
+                              <ShoppingBagIcon className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </Card>
+                    </Link>
+                  ))
+                }
+            {/* {featuredProducts.map((product) => (
               <Link
                 key={product.id}
                 to={`/produk/${product.id}`}
@@ -245,7 +327,7 @@ const LandingPage = () => {
                   </div>
                 </Card>
               </Link>
-            ))}
+            ))} */}
               </div>
             </div>
           </div>

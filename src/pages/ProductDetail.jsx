@@ -1,6 +1,6 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
-import { Button, Card, Row, Col, Tag, Descriptions, Divider, Avatar, Rate, Modal, message } from 'antd'
+import { Button, Card, Row, Col, Tag, Descriptions, Divider, Avatar, Rate, Modal, message, Spin } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   ShoppingCartIcon,
@@ -13,8 +13,11 @@ import {
 import { formatPrice } from '../utils/format'
 import { useUser } from '../contexts/UserContext'
 import { useCart } from '../contexts/CartContext'
-import { getProductById } from '../utils/mockProducts'
 import { USER_ROLES } from '../utils/authRoles'
+import { useQuery } from '@tanstack/react-query'
+import productApi from '../api/ProductApi'
+import reviewApi from '../api/ReviewApi'
+import formatTanggal from '../utils/formatTanggal'
 
 const ProductDetail = () => {
   const { id } = useParams()
@@ -24,25 +27,43 @@ const ProductDetail = () => {
   const { isAuthenticated, hasRole } = useUser()
   const { cartItems, setCartItems } = useCart()
   
+  const {data: productDetail, isLoading, isError, error} = useQuery({
+    queryKey: ["detailProduct", id],
+    queryFn: () => productApi.getById(id),
+    staleTime: Infinity,
+  })
+
+  const {data: review, isLoading: loadingReview, isError: errorReview, error: err} = useQuery({
+    queryKey: ["review", productDetail?.data?.data[0].id],
+    queryFn: () => reviewApi.getReviewProduct(productDetail?.data?.data[0].id),
+    staleTime: Infinity,
+  })
+  
   const isArtisan = hasRole(USER_ROLES.ARTISAN)
-
-  const product = getProductById(id)
-
-  if (!product) {
+  
+  if (isLoading || loadingReview) {
+    return (
+      <div className="flex justify-center py-12">
+        <Spin size="large" />
+      </div>
+    )
+  }
+  
+  if (isError || errorReview) {
     return (
       <div className="min-h-screen bg-wastra-brown-50 py-8">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-2xl font-semibold text-wastra-brown-800 mb-4">
-            Produk tidak ditemukan
+            {error?.name || err?.name}
           </h1>
           <p className="text-wastra-brown-600 mb-6">
-            Produk yang Anda cari tidak tersedia atau telah dihapus.
+            {error?.message || err?.message}
           </p>
           <Button
             type="primary"
             onClick={() => navigate('/produk')}
             className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-          >
+            >
             Kembali ke Katalog
           </Button>
         </div>
@@ -50,42 +71,10 @@ const ProductDetail = () => {
     )
   }
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      userName: 'Putu Sari',
-      avatar: null,
-      rating: 5,
-      date: '15 Desember 2024',
-      comment: 'Kainnya sangat bagus dan berkualitas tinggi! Motifnya sangat detail dan warnanya tidak luntur setelah dicuci. Pengiriman juga cepat. Sangat puas dengan pembelian ini.'
-    },
-    {
-      id: 2,
-      userName: 'Made Wijaya',
-      avatar: null,
-      rating: 4,
-      date: '10 Desember 2024',
-      comment: 'Kualitas kain sangat baik, cocok untuk dibuat baju adat. Hanya saja harganya sedikit mahal, tapi sebanding dengan kualitasnya.'
-    },
-    {
-      id: 3,
-      userName: 'Ketut Dewi',
-      avatar: null,
-      rating: 5,
-      date: '5 Desember 2024',
-      comment: 'Sangat suka dengan produk ini! Motifnya unik dan autentik. Pengrajinnya juga sangat ramah dan responsif. Akan beli lagi untuk koleksi.'
-    },
-    {
-      id: 4,
-      userName: 'Wayan Kadek',
-      avatar: null,
-      rating: 4,
-      date: '28 November 2024',
-      comment: 'Kain endek yang bagus, teksturnya halus dan nyaman dipakai. Cocok untuk berbagai acara adat. Recommended!'
-    }
-  ]
+  const product = productDetail?.data?.data
 
+  // Mock reviews data
+  const reviews = review?.data?.data
 
   return (
     <div className="min-h-screen bg-wastra-brown-50 py-3 sm:py-4 md:py-6 lg:py-8 overflow-x-hidden">
@@ -109,14 +98,12 @@ const ProductDetail = () => {
               className="h-48 sm:h-64 md:h-80 bg-wastra-brown-50 flex items-center justify-center rounded-lg mb-3 sm:mb-4 border border-wastra-brown-100 cursor-pointer hover:opacity-90 transition"
               onClick={() => setIsImageModalVisible(true)}
             >
-              <span className="text-wastra-brown-400 text-xs sm:text-sm md:text-base text-center px-2 sm:px-4">
-                {product.name} - Foto {selectedImageIndex + 1}
-              </span>
+              <img src={product[0].image_url[selectedImageIndex]} alt="" />
             </div>
             
             {/* Thumbnail Gallery */}
             <div className="grid grid-cols-4 gap-2">
-              {product.images.map((img, idx) => (
+              {product[0].image_url.map((img, idx) => (
                 <div 
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -127,9 +114,7 @@ const ProductDetail = () => {
                   }`}
                 >
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-wastra-brown-400 text-xs">
-                      Foto {idx + 1}
-                    </span>
+                    <img src={img} alt="" className='h-full w-full'/>
                   </div>
                 </div>
               ))}
@@ -141,32 +126,40 @@ const ProductDetail = () => {
         <Col xs={24} md={12} className="!px-2 sm:!px-3 md:!px-4">
           <Card className="border border-wastra-brown-200 rounded-xl shadow-sm" bodyStyle={{ padding: '12px' }}>
             <div className="mb-3 sm:mb-4">
-              <Tag color={product.category === 'endek' ? 'blue' : 'gold'} className="mb-2 text-xs sm:text-sm">
-                {product.category === 'endek' ? 'Endek' : 'Songket'}
-              </Tag>
+              <div className='flex flex-row'>
+                <Tag color={product[0].category === 'Endek' ? 'blue' : 'gold'} className="mb-2 text-xs sm:text-sm">
+                  {product[0].category === 'Endek' ? 'Endek' : 'Songket'}
+                </Tag>
+                <Tag color={'orange'} className={product[0].discount !== null && product[0].discount < 1? `hidden` : `mb-2 text-xs sm:text-sm`}>Hemat {product[0].discount}%</Tag>
+              </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-wastra-brown-800 leading-tight">{product.name}</h1>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                <Rate disabled defaultValue={product.rating} allowHalf className="text-xs sm:text-sm" />
+                <Rate disabled defaultValue={product[0].rating} allowHalf className="text-xs sm:text-sm" />
                 <span className="text-wastra-brown-600 text-xs sm:text-sm">
-                  {product.rating} ({product.totalReviews} ulasan)
+                  {product.rating} ({product[0].review_count} ulasan)
                 </span>
               </div>
-              <p className="text-2xl sm:text-3xl font-bold text-red-600 mb-3 sm:mb-4">
-                {formatPrice(product.price)}
-              </p>
+              <div className='flex flex-row gap-2 items-center'>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600 mb-3 sm:mb-4">
+                  {formatPrice(product[0].last_price)}
+                </p>
+                <p className="text-lg sm:text-xl font-bold text-gray-400 line-through mb-3 sm:mb-4">
+                  {formatPrice(product[0].price)}
+                </p>
+              </div>
             </div>
 
             <Divider className="my-3 sm:my-4" />
 
             <div className="mb-4 sm:mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
-                <Link to={`/artisan/${product.artisan.id}`} className="flex-1 min-w-0">
+                <Link to={`/artisan/${product[0].user.id}`} className="flex-1 min-w-0">
                   <Button 
                     type="link" 
                     icon={<UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
                     className="p-0 text-wastra-brown-600 hover:text-wastra-brown-800 text-sm sm:text-base"
                   >
-                    <span className="text-sm sm:text-base md:text-lg truncate block">Toko: {product.artisan.name}</span>
+                    <span className="text-sm sm:text-base md:text-lg truncate block">Toko: {product[0].user.name}</span>
                   </Button>
                 </Link>
                 <Button
@@ -194,9 +187,9 @@ const ProductDetail = () => {
                   Chat Penjual
                 </Button>
               </div>
-              {product.description && (
+              {product[0].description && (
                 <p className="text-sm sm:text-base text-wastra-brown-700 whitespace-pre-line leading-relaxed">
-                  {product.description}
+                  {product[0].description}
                 </p>
               )}
             </div>
@@ -205,13 +198,13 @@ const ProductDetail = () => {
 
             <Descriptions title="Spesifikasi Produk" bordered column={1} className="mb-4 sm:mb-6 text-xs sm:text-sm">
               <Descriptions.Item label="Bahan">
-                {product.specifications.material}
+                {product[0].material}
               </Descriptions.Item>
               <Descriptions.Item label="Lebar">
-                {product.specifications.width}
+                {product[0].wide}
               </Descriptions.Item>
               <Descriptions.Item label="Panjang">
-                {product.specifications.length}
+                {product[0].long}
               </Descriptions.Item>
             </Descriptions>
 
@@ -350,50 +343,54 @@ const ProductDetail = () => {
             </h2>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <Rate disabled defaultValue={product.rating} allowHalf className="text-lg" />
+                <Rate disabled defaultValue={product[0].rating} allowHalf className="text-lg" />
                 <span className="text-xl font-semibold text-wastra-brown-800">
-                  {product.rating}
+                  {product[0].rating}
                 </span>
               </div>
               <span className="text-wastra-brown-600">
-                dari {product.totalReviews} ulasan
+                dari {product[0].review_count} ulasan
               </span>
             </div>
           </div>
 
           <Divider className="my-6" />
-
-          <div className="space-y-6">
-            {reviews.map((review) => (
-              <div key={review.id} className="pb-6 border-b border-wastra-brown-100 last:border-0 last:pb-0">
-                <div className="flex items-start gap-4">
-                  <Avatar 
-                    size={48} 
-                    icon={<UserIcon className="w-6 h-6" />}
-                    className="bg-wastra-brown-200 text-wastra-brown-600 flex-shrink-0"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <h4 className="font-semibold text-wastra-brown-800 mb-1">
-                          {review.userName}
-                        </h4>
-                        <div className="flex items-center gap-2">
-                          <Rate disabled defaultValue={review.rating} className="text-sm" />
-                          <span className="text-sm text-wastra-brown-500">
-                            {review.date}
-                          </span>
+          {
+            reviews?.length === 0?
+            <div>Belum ada Ulasan</div>
+            :
+            <div className="space-y-6">
+              {reviews?.data.map((review) => (
+                <div key={review.id} className="pb-6 border-b border-wastra-brown-100 last:border-0 last:pb-0">
+                  <div className="flex items-start gap-4">
+                    <Avatar 
+                      size={48} 
+                      icon={<UserIcon className="w-6 h-6" />}
+                      className="bg-wastra-brown-200 text-wastra-brown-600 flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-wastra-brown-800 mb-1">
+                            {review.reviewer.name}
+                          </h4>
+                          <div className="flex items-center gap-2">
+                            <Rate disabled defaultValue={review.rating} className="text-sm" />
+                            <span className="text-sm text-wastra-brown-500">
+                              {formatTanggal(review.created_at)}
+                            </span>
+                          </div>
                         </div>
                       </div>
+                      <p className="text-wastra-brown-700 mt-3 leading-relaxed">
+                        {review.comment}
+                      </p>
                     </div>
-                    <p className="text-wastra-brown-700 mt-3 leading-relaxed">
-                      {review.comment}
-                    </p>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          }
 
           {reviews.length > 4 && (
             <div className="mt-6 text-center">
@@ -421,20 +418,18 @@ const ProductDetail = () => {
       >
         <div className="relative">
           <div className="aspect-square bg-wastra-brown-50 flex items-center justify-center rounded-lg border border-wastra-brown-100 mb-4">
-            <span className="text-wastra-brown-400 text-lg text-center px-4">
-              {product.name} - Foto {selectedImageIndex + 1}
-            </span>
+            <img src={product[0].image_url[selectedImageIndex]} alt="" className='h-full'/>
           </div>
           
           {/* Navigation Arrows */}
-          {product.images.length > 1 && (
+          {product[0].image_url.length > 1 && (
             <>
               <Button
                 type="text"
                 className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow-lg border-none z-10"
                 icon={<ChevronLeftIcon className="w-6 h-6" />}
                 onClick={() => setSelectedImageIndex((prev) => 
-                  prev === 0 ? product.images.length - 1 : prev - 1
+                  prev === 0 ? product[0].image_url.length - 1 : prev - 1
                 )}
               />
               <Button
@@ -442,16 +437,16 @@ const ProductDetail = () => {
                 className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow-lg border-none z-10"
                 icon={<ChevronRightIcon className="w-6 h-6" />}
                 onClick={() => setSelectedImageIndex((prev) => 
-                  prev === product.images.length - 1 ? 0 : prev + 1
+                  prev === product[0].image_url.length - 1 ? 0 : prev + 1
                 )}
               />
             </>
           )}
           
           {/* Thumbnail Navigation */}
-          {product.images.length > 1 && (
+          {product[0].image_url.length > 1 && (
             <div className="flex gap-2 justify-center mt-4">
-              {product.images.map((img, idx) => (
+              {product[0].image_url.map((img, idx) => (
                 <div
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -461,9 +456,7 @@ const ProductDetail = () => {
                       : 'border-wastra-brown-100 hover:border-wastra-brown-300'
                   } bg-wastra-brown-50 flex items-center justify-center`}
                 >
-                  <span className="text-wastra-brown-400 text-xs">
-                    {idx + 1}
-                  </span>
+                  <img src={img} alt="" className='w-full h-full'/> 
                 </div>
               ))}
             </div>
@@ -475,4 +468,3 @@ const ProductDetail = () => {
 }
 
 export default ProductDetail
-
