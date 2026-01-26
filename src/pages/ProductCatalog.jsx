@@ -8,8 +8,6 @@ import {
 } from '@heroicons/react/24/outline'
 
 import productApi from '../api/ProductApi'
-import { useUser } from '../contexts/UserContext'
-import { USER_ROLES } from '../utils/authRoles'
 import { formatPrice } from '../utils/format'
 import orderApi from '../api/OrderApi'
 
@@ -23,12 +21,13 @@ const PRICE_MAP = {
 }
 
 const ProductCatalog = () => {
+  const token = localStorage.getItem("AUTH_TOKEN")
+  const isAuthenticated = !!token
+
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const { isAuthenticated, hasRole } = useUser()
-
-  const isArtisan = hasRole(USER_ROLES.ARTISAN)
+  const isArtisan = localStorage.getItem("ROLE") === 'artisan'
 
   // 🔑 SOURCE OF TRUTH DARI URL
   const search = searchParams.get('search') || ''
@@ -140,7 +139,7 @@ const ProductCatalog = () => {
         ) : (
           <Row gutter={[16, 16]}>
             {products.map((product) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={product.id}>
+              <Col xs={24} sm={12} md={8} lg={6} key={product.id} >
                 <Card
                   hoverable
                   cover={
@@ -152,53 +151,58 @@ const ProductCatalog = () => {
                       />
                     </Link>
                   }
+                  className='h-[420px]'
                 >
-                  <Tag color="blue">{product.category}</Tag>
+                  <div className='h-full flex flex-col justify-between space-y-4'>
+                    <div className='flex flex-row'>
+                      <Tag color={product.category === 'Endek'? `blue`: 'orange'}>{product.category}</Tag>
+                      <Tag color='red' className={product.discount !== 0 && product.discount !== null? '' : 'hidden'}>Hemat {product.discount}%</Tag>
+                    </div>
 
-                  <h3 className="font-semibold mt-2 line-clamp-2">
-                    {product.name}
-                  </h3>
+                    <h3 className="font-semibold line-clamp-2 text-ellipsis h-[48px]">
+                      {product.name}
+                    </h3>
 
-                  <p className="text-lg font-bold text-red-600 mt-1">
-                    {formatPrice(product.last_price)}
-                  </p>
+                    <p className="text-lg font-bold text-red-600">
+                      {formatPrice(product.last_price)}
+                    </p>
 
-                  <Button
-                    block
-                    className="mt-3"
-                    icon={<ShoppingCartIcon className="w-4 h-4" />}
-                    disabled={isArtisan || addCart.isLoading}
-                    onClick={() => {
-                      if (isArtisan) {
-                        Modal.warning({
-                          title: 'Akses Dibatasi',
-                          icon: <ExclamationCircleOutlined />,
-                          content: 'Pengrajin tidak dapat membeli produk.',
+                    <Button
+                      block
+                      icon={<ShoppingCartIcon className="w-4 h-4" />}
+                      disabled={isArtisan || addCart.isLoading}
+                      onClick={() => {
+                        if (isArtisan) {
+                          Modal.warning({
+                            title: 'Akses Dibatasi',
+                            icon: <ExclamationCircleOutlined />,
+                            content: 'Pengrajin tidak dapat membeli produk.',
+                          })
+                          return
+                        }
+
+                        if (!isAuthenticated) {
+                          Modal.confirm({
+                            title: 'Login Diperlukan',
+                            onOk: () =>
+                              navigate(
+                                `/onboarding?redirect=${encodeURIComponent(
+                                  `/produk/${product.id}`
+                                )}`
+                              ),
+                          })
+                          return
+                        }
+
+                        addCart.mutate({
+                          id: product.id,
+                          quantity: 1,
                         })
-                        return
-                      }
-
-                      if (!isAuthenticated) {
-                        Modal.confirm({
-                          title: 'Login Diperlukan',
-                          onOk: () =>
-                            navigate(
-                              `/onboarding?redirect=${encodeURIComponent(
-                                `/produk/${product.id}`
-                              )}`
-                            ),
-                        })
-                        return
-                      }
-
-                      addCart.mutate({
-                        id: product.id,
-                        quantity: 1,
-                      })
-                    }}
-                  >
-                    Tambah ke Keranjang
-                  </Button>
+                      }}
+                    >
+                      Tambah ke Keranjang
+                    </Button>
+                  </div>
                 </Card>
               </Col>
             ))}

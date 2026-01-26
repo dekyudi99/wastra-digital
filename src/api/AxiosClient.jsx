@@ -1,8 +1,8 @@
 import axios from "axios"
 
 const axiosClient = axios.create({
-    // baseURL: 'http://localhost:8000/api/',
-    baseURL: 'https://apiwastradigital.ikya.my.id/api/',
+    baseURL: 'http://localhost:8000/api/',
+    // baseURL: 'https://apiwastradigital.ikya.my.id/api/',
     headers: {
         "Content-Type": "application/json",
     },
@@ -10,9 +10,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
     (config) => {
-        const token = JSON.parse(
-            localStorage.getItem('wastra.user')
-        )?.token
+        const token = localStorage.getItem("AUTH_TOKEN")
 
         if (token) {
             config.headers['Authorization'] = `Bearer ${token}`
@@ -32,7 +30,7 @@ axiosClient.interceptors.response.use(
             // localStorage.removeItem('wastra.user')
             // localStorage.removeItem('wastra.role')
             
-            // window.location.href = '/login'
+            // window.location.href = '/masuk'
         }
 
         

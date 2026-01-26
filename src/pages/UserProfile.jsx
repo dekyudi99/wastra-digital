@@ -1,298 +1,196 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Form, Input, Button, Upload, Avatar, message, Tabs, Divider } from 'antd'
-import { 
-  UserIcon, 
-  CameraIcon,
-  ArrowLeftIcon,
-  LockClosedIcon
-} from '@heroicons/react/24/outline'
-import { useUser } from '../contexts/UserContext'
+import { Card, Form, Input, Button, Upload, Avatar, message, Tabs, Spin } from 'antd'
+import { UserIcon, CameraIcon, ArrowLeftIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { ROLE_LABELS_ID } from '../utils/authRoles'
+import userApi from '../api/UserApi'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const { TabPane } = Tabs
 
 const UserProfile = () => {
   const navigate = useNavigate()
-  const { user, updateUser, updateAvatar, logout } = useUser()
+  const queryClient = useQueryClient()
   const [form] = Form.useForm()
   const [passwordForm] = Form.useForm()
-  const [loading, setLoading] = useState(false)
+  
   const [activeTab, setActiveTab] = useState('profile')
+  const [previewImage, setPreviewImage] = useState(null)
+  const [fileList, setFileList] = useState([])
 
-  if (!user) {
-    navigate('/masuk')
-    return null
-  }
+  const { data: userData, isLoading } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: userApi.profile,
+  })
 
-  // Handle avatar upload
-  const handleAvatarChange = (info) => {
-    const { file } = info
-    
-    // Handle file selection
-    if (file) {
-      // Convert file to base64 untuk persist di localStorage
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const base64String = e.target.result
-        updateAvatar(base64String)
-        message.success('Foto profil berhasil diubah')
-      }
-      reader.onerror = () => {
-        message.error('Gagal membaca file')
-      }
-      reader.readAsDataURL(file.originFileObj || file)
+  const user = userData?.data?.data
+
+  // Sinkronisasi form saat data user dimuat
+  useEffect(() => {
+    if (user) {
+      form.setFieldsValue({
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        role: ROLE_LABELS_ID[user.role],
+      })
     }
-  }
+  }, [user, form])
 
-  // Handle profile update
-  const handleProfileUpdate = async (values) => {
-    setLoading(true)
-    try {
-      // Simulasi API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      updateUser(values)
+  // MUTATION: Update Profile
+  const updateProfile = useMutation({
+    mutationFn: (data) => userApi.update(data),
+    onSuccess: () => {
       message.success('Profil berhasil diperbarui')
-    } catch (error) {
-      message.error('Gagal memperbarui profil')
-    } finally {
-      setLoading(false)
-    }
-  }
+      queryClient.invalidateQueries(["userProfile"])
+      setFileList([])
+    },
+    onError: (err) => message.error(err.response?.data?.message || 'Gagal update profil')
+  })
 
-  // Handle password change
-  const handlePasswordChange = async (values) => {
-    setLoading(true)
-    try {
-      // Simulasi API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      message.success('Kata sandi berhasil diubah')
+  // MUTATION: Change Password
+  const updatePassword = useMutation({
+    mutationFn: (data) => userApi.changePassword(data),
+    onSuccess: () => {
+      message.success('Password berhasil diubah')
       passwordForm.resetFields()
-    } catch (error) {
-      message.error('Gagal mengubah kata sandi')
-    } finally {
-      setLoading(false)
+    },
+    onError: (err) => message.error(err.response?.data?.message || 'Gagal ubah password')
+  })
+
+  const handleUpdateProfile = (values) => {
+    const formData = new FormData()
+    formData.append('name', values.name)
+    formData.append('phone', values.phone)
+    if (fileList.length > 0) {
+      formData.append('profile_picture', fileList[0].originFileObj)
     }
+    updateProfile.mutate(formData)
   }
 
-  const uploadProps = {
-    name: 'avatar',
-    listType: 'picture-circle',
-    showUploadList: false,
-    beforeUpload: (file) => {
-      const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-      if (!isJpgOrPng) {
-        message.error('Hanya file JPG/PNG yang diizinkan!')
-        return Upload.LIST_IGNORE
-      }
-      const isLt2M = file.size / 1024 / 1024 < 2
-      if (!isLt2M) {
-        message.error('Ukuran gambar harus kurang dari 2MB!')
-        return Upload.LIST_IGNORE
-      }
-      // Prevent auto upload, kita handle manual di onChange
-      return false
-    },
-    onChange: handleAvatarChange,
-    customRequest: () => {
-      // Custom request untuk prevent auto upload
-      // File sudah di-handle di onChange
-    },
+  const handleChangePassword = (values) => {
+    updatePassword.mutate({
+      current_password: values.currentPassword,
+      new_password: values.newPassword,
+      confirm_password: values.confirmPassword
+    })
   }
+
+  const handlePreview = (info) => {
+    // Ambil file terakhir yang diunggah
+    const file = info.fileList[info.fileList.length - 1];
+    
+    if (file && file.originFileObj) {
+      // Membuat URL sementara untuk pratinjau
+      const url = URL.createObjectURL(file.originFileObj);
+      setPreviewImage(url);
+      setFileList([file]); // Simpan file untuk dikirim saat onFinish
+      
+      // Opsional: Bersihkan memori saat komponen unmount atau foto diganti lagi
+      return () => URL.revokeObjectURL(url);
+    }
+  };
+
+  if (isLoading) return <div className="text-center py-20"><Spin size="large" /></div>
 
   return (
-    <div className="bg-wastra-brown-50 min-h-screen py-6 sm:py-8 overflow-x-hidden w-full">
-      <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-wastra-brown-600 hover:text-wastra-brown-800 mb-4"
-          >
-            <ArrowLeftIcon className="w-5 h-5" />
-            <span>Kembali</span>
-          </button>
-          <h1 className="text-3xl font-semibold text-wastra-brown-800">Profil Saya</h1>
-          <p className="text-wastra-brown-600 mt-2">
-            Kelola informasi profil dan akun Anda
-          </p>
-        </div>
+    <div className="bg-wastra-brown-50 min-h-screen py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 mb-6 text-gray-600">
+          <ArrowLeftIcon className="w-5 h-5" /> Kembali
+        </button>
 
-        <Tabs activeKey={activeTab} onChange={setActiveTab} className="bg-white rounded-lg p-6">
-          {/* Profile Tab */}
+        <Tabs activeKey={activeTab} onChange={setActiveTab} className="bg-white rounded-xl shadow-sm p-6">
           <TabPane tab="Profil" key="profile">
-            <Card className="border-0 shadow-none">
-              <div className="text-center mb-8">
-                <Upload {...uploadProps}>
-                  <div className="relative inline-block">
-                    <Avatar
-                      size={120}
-                      src={user.avatar}
-                      icon={!user.avatar && <UserIcon className="w-12 h-12" />}
-                      className="border-4 border-wastra-brown-200"
-                    />
-                    <div className="absolute bottom-0 right-0 bg-wastra-brown-600 rounded-full p-2 cursor-pointer hover:bg-wastra-brown-700 transition-colors">
-                      <CameraIcon className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-                </Upload>
-                <p className="text-sm text-wastra-brown-600 mt-4">
-                  Klik untuk mengubah foto profil
-                </p>
-              </div>
-
-              <Form
-                form={form}
-                layout="vertical"
-                initialValues={{
-                  name: user.name || '',
-                  email: user.email || '',
-                  phone: user.phone || '',
-                  role: ROLE_LABELS_ID[user.role] || '',
-                }}
-                onFinish={handleProfileUpdate}
+            <div className="text-center mb-8">
+              <Upload
+                listType="picture-circle"
+                showUploadList={false}
+                beforeUpload={() => false} // Mencegah upload otomatis
+                onChange={handlePreview}
               >
-                <Form.Item
-                  name="name"
-                  label="Nama Lengkap"
-                  rules={[{ required: true, message: 'Masukkan nama lengkap' }]}
+                <div className="relative">
+                  <Avatar
+                    size={120}
+                    // Prioritas: 1. Foto yang baru dipilih (preview) 2. Foto dari API 3. Default Icon
+                    src={previewImage || user?.profile}
+                    icon={!(previewImage || user?.profile) && <UserIcon className="w-12 h-12" />}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-0 right-0 bg-wastra-brown-600 p-2 rounded-full">
+                    <CameraIcon className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </Upload>
+              {fileList.length > 0 && <p className="text-orange-600 text-xs mt-2">Pratinjau: Jangan lupa klik simpan</p>}
+              {previewImage && (
+                <Button 
+                  type="primary" 
+                  danger 
+                  size="small"
+                  onClick={() => {
+                    setPreviewImage(null);
+                    setFileList([]);
+                  }}
+                  className='bg-black'
                 >
-                  <Input size="large" placeholder="Nama lengkap Anda" />
-                </Form.Item>
+                  Batal Ganti Foto
+                </Button>
+              )}
+            </div>
 
-                <Form.Item
-                  name="email"
-                  label="Email"
-                  rules={[
-                    { required: true, message: 'Masukkan email' },
-                    { type: 'email', message: 'Format email tidak valid' },
-                  ]}
-                >
-                  <Input size="large" placeholder="nama@email.com" disabled />
-                </Form.Item>
-
-                <Form.Item
-                  name="phone"
-                  label="Nomor Telepon"
-                  rules={[
-                    { required: true, message: 'Masukkan nomor telepon' },
-                    { pattern: /^[0-9+\-\s()]+$/, message: 'Format nomor telepon tidak valid' },
-                  ]}
-                >
-                  <Input size="large" placeholder="+62 812-3456-7890" />
-                </Form.Item>
-
-                <Form.Item name="role" label="Peran">
-                  <Input size="large" disabled />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    size="large"
-                    loading={loading}
-                    className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                  >
-                    Simpan Perubahan
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
+            <Form form={form} layout="vertical" onFinish={handleUpdateProfile}>
+              <Form.Item name="name" label="Nama Lengkap" rules={[{ required: true }]}>
+                <Input size="large" />
+              </Form.Item>
+              <Form.Item name="email" label="Email">
+                <Input size="large" disabled />
+              </Form.Item>
+              <Form.Item name="phone" label="Nomor Telepon" rules={[{ required: true }]}>
+                <Input size="large" />
+              </Form.Item>
+              <Form.Item name="role" label="Peran">
+                <Input size="large" disabled />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" size="large" block loading={updateProfile.isLoading} className="bg-wastra-brown-600">
+                Simpan Perubahan
+              </Button>
+            </Form>
           </TabPane>
 
-          {/* Change Password Tab */}
-          <TabPane tab="Ubah Kata Sandi" key="password">
-            <Card className="border-0 shadow-none">
-              <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <LockClosedIcon className="w-6 h-6 text-wastra-brown-600" />
-                  <h3 className="text-xl font-semibold text-wastra-brown-800">
-                    Ubah Kata Sandi
-                  </h3>
-                </div>
-                <p className="text-wastra-brown-600">
-                  Pastikan kata sandi baru Anda kuat dan mudah diingat
-                </p>
-              </div>
-
-              <Form
-                form={passwordForm}
-                layout="vertical"
-                onFinish={handlePasswordChange}
+          <TabPane tab="Ubah Password" key="password">
+            <Form form={passwordForm} layout="vertical" onFinish={handleChangePassword}>
+              <Form.Item name="currentPassword" label="Password Saat Ini" rules={[{ required: true }]}>
+                <Input.Password size="large" />
+              </Form.Item>
+              <Form.Item name="newPassword" label="Password Baru" rules={[{ required: true, min: 8 }]}>
+                <Input.Password size="large" />
+              </Form.Item>
+              <Form.Item 
+                name="confirmPassword" 
+                label="Konfirmasi Password" 
+                dependencies={['newPassword']}
+                rules={[
+                  { required: true },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue('newPassword') === value) return Promise.resolve()
+                      return Promise.reject(new Error('Password tidak cocok'))
+                    },
+                  }),
+                ]}
               >
-                <Form.Item
-                  name="currentPassword"
-                  label="Kata Sandi Saat Ini"
-                  rules={[{ required: true, message: 'Masukkan kata sandi saat ini' }]}
-                >
-                  <Input.Password size="large" placeholder="••••••••" />
-                </Form.Item>
-
-                <Form.Item
-                  name="newPassword"
-                  label="Kata Sandi Baru"
-                  rules={[
-                    { required: true, message: 'Masukkan kata sandi baru' },
-                    { min: 8, message: 'Kata sandi minimal 8 karakter' },
-                  ]}
-                >
-                  <Input.Password size="large" placeholder="Minimal 8 karakter" />
-                </Form.Item>
-
-                <Form.Item
-                  name="confirmPassword"
-                  label="Konfirmasi Kata Sandi Baru"
-                  dependencies={['newPassword']}
-                  rules={[
-                    { required: true, message: 'Konfirmasi kata sandi baru' },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue('newPassword') === value) {
-                          return Promise.resolve()
-                        }
-                        return Promise.reject(new Error('Kata sandi tidak sama'))
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password size="large" placeholder="Ulangi kata sandi baru" />
-                </Form.Item>
-
-                <Form.Item>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    size="large"
-                    loading={loading}
-                    className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                  >
-                    Ubah Kata Sandi
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
+                <Input.Password size="large" />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" size="large" block loading={updatePassword.isLoading} className="bg-wastra-brown-600">
+                Update Password
+              </Button>
+            </Form>
           </TabPane>
         </Tabs>
-
-        {/* Logout Button */}
-        <div className="mt-6 text-center">
-          <Button
-            danger
-            size="large"
-            onClick={() => {
-              logout()
-              navigate('/')
-              message.success('Anda telah keluar')
-            }}
-          >
-            Keluar
-          </Button>
-        </div>
       </div>
     </div>
   )
 }
 
 export default UserProfile
-

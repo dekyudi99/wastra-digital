@@ -4,7 +4,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Layout from '../components/Layout';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { USER_ROLES } from '../utils/authRoles';
-import roleGuard from '../loader/roleGuard';
+import roleGuard from "./loader/roleGuard";
 
 // Pages
 import LandingPage from '../pages/LandingPage';
@@ -31,6 +31,7 @@ import ArtisanOrders from '../pages/ArtisanOrders';
 import ArtisanProfile from '../pages/ArtisanProfile';
 import OtpPage from '../pages/OtpPage';
 import RouteNotFound from '../RouteNotFound';
+import loginGuard from "./loader/LoginGuard";
 
 const routes = createBrowserRouter([
   {
@@ -48,10 +49,10 @@ const routes = createBrowserRouter([
       { path: "daftar", element: <RegisterPage /> },
       { path: "lupa-password", element: <ForgotPassword /> },
       { path: "otp", element: <OtpPage /> },
-      { path: "keranjang", element: <Cart /> },
+      { path: "keranjang", element: <Cart />, loader: roleGuard('customer') },
 
-      { path: "checkout", element: <Checkout /> },
-      { path: "order-success", element: <OrderSuccess /> },
+      { path: "checkout", element: <Checkout />, loader: roleGuard('customer')},
+      { path: "order-success", element: <OrderSuccess />, loader: roleGuard('customer') },
       { path: "profil", element: <UserProfile /> },
       { path: "pesanan", element: <OrderHistory /> },
       { path: "alamat", element: <AddressManagement /> },
@@ -64,17 +65,12 @@ const routes = createBrowserRouter([
         loader: roleGuard('artisan'), 
         children: [
           { index: true, element: <ArtisanDashboard /> },
-          { 
-            element: <ProtectedRoute requireRole={USER_ROLES.ARTISAN} />,
-            children: [
-              { path: "produk", element: <ArtisanProducts /> },
-              { path: "produk/tambah", element: <ArtisanProducts /> },
-              { path: "produk/:id", element: <ArtisanProducts /> },
-              { path: "pesanan", element: <ArtisanOrders /> },
-              { path: "pesanan/:id", element: <ArtisanOrders /> },
-              { path: "profil", element: <ArtisanProfile /> },
-            ]
-          }
+          { path: "produk", element: <ArtisanProducts /> },
+          { path: "produk/tambah", element: <ArtisanProducts /> },
+          { path: "produk/:id", element: <ArtisanProducts /> },
+          { path: "pesanan", element: <ArtisanOrders /> },
+          { path: "pesanan/:id", element: <ArtisanOrders /> },
+          { path: "profil", element: <ArtisanProfile /> },
         ]
       },
 

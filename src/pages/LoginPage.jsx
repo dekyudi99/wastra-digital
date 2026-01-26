@@ -1,22 +1,13 @@
 import { useMemo } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Button, Card, Form, Input, Select, message } from 'antd'
+import { Button, Card, Form, Input, message } from 'antd'
 import { useMutation } from '@tanstack/react-query'
 import authApi from '../api/AuthApi'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
-import { useUser } from '../contexts/UserContext'
 
 const LoginPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { login, isAuthenticated } = useUser()
-
-  const redirectUrl = params.get('redirect') || '/profil'
-
-  if (isAuthenticated) {
-    navigate(redirectUrl)
-    return null
-  }
 
   const role = useMemo(() => {
     return params.get('role')
@@ -38,12 +29,8 @@ const LoginPage = () => {
       const { token, user } = data
 
       // Simpan ke context / storage
-      login({
-        token,
-        role: user.role,
-        emailVerified: Boolean(user.email_verified),
-        user,
-      })
+      localStorage.setItem("AUTH_TOKEN", token)
+      localStorage.setItem("ROLE", user.role)
 
       message.success('Login berhasil')
 
@@ -59,7 +46,7 @@ const LoginPage = () => {
       } else if (user.role == 'pengerajin') {
         navigate('/pengrajin')
       } else {
-        navigate(redirectUrl)
+        window.location.href = '/';
       }
     },
     onError: (error) => {
@@ -85,13 +72,13 @@ const LoginPage = () => {
         <div className="mb-6">
           <h1 className="text-3xl font-semibold text-wastra-brown-800">Masuk</h1>
           <p className="text-wastra-brown-600 mt-2">
-            Masuk sebagai <span className="font-medium">{ROLE_LABELS_ID[role]}</span>
+            Masukkan Email dan Password anda!
           </p>
         </div>
 
         <Card className="border border-wastra-brown-100 rounded-2xl">
           <Form layout="vertical" onFinish={onFinish} initialValues={{ role }}>
-            {!isAdmin && (
+            {/* {!isAdmin && (
               <Form.Item
                 name="role"
                 label="Peran"
@@ -105,7 +92,7 @@ const LoginPage = () => {
                   ]}
                 />
               </Form.Item>
-            )}
+            )} */}
 
             <Form.Item
               name="email"
@@ -139,7 +126,7 @@ const LoginPage = () => {
             {!isAdmin && (
               <div className="mt-4 text-sm text-wastra-brown-600">
                 Belum punya akun?{' '}
-                <Link to={`/daftar?role=${role}`} className="font-medium hover:underline">
+                <Link to={`/onboarding`} className="font-medium hover:underline">
                   Daftar
                 </Link>
               </div>

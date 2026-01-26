@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Card, Button, Checkbox, Spin, message } from 'antd'
+import { Card, Button, Checkbox, Spin, message, Modal } from 'antd'
+import { ExclamationCircleIcon } from '@heroicons/react/16/solid'
 import { 
   MinusIcon, 
   PlusIcon, 
@@ -164,7 +165,25 @@ const Cart = () => {
               size="large"
               className="bg-amber-800 text-white px-12 h-12 rounded-lg"
               disabled={selectedIds.length === 0}
-              onClick={() => navigate('/checkout', { state: { items: selectedItems, total } })}
+              onClick={() => {
+                Modal.confirm({
+                  title: "Konfirmasi Checkout",
+                  icon: <ExclamationCircleIcon className='h-7 text-amber-600'/>,
+                  content: `Anda akan melakukan checkout untuk ${selectedIds.length} item. Lanjutkan?`,
+                  okText: "Ya!",
+                  cancelText: "Nggak Dulu!",
+                  onOk: () => {
+                    // 🔑 KIRIM DATA JSON LEWAT STATE
+                    navigate('/checkout', { 
+                      state: { 
+                        cartItemIds: selectedIds, // Mengirim array ID keranjang
+                        totalAmount: total,       // Mengirim total harga sebagai tambahan
+                        items: selectedItems      // Mengirim data produk lengkap agar checkout tidak perlu fetch ulang
+                      } 
+                    });
+                  }
+                })
+              }}
             >
               Checkout
             </Button>

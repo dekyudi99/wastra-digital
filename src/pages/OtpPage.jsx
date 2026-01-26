@@ -37,7 +37,7 @@ const OtpPage = () => {
         } else if (user.role == 'artisan') {
             navigate('/pengrajin', { replace: true })
         } else {
-            navigate('/', {replace: true})
+            window.location.href = '/';
         }
     },
     onError: (error) => {

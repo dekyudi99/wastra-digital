@@ -18,21 +18,15 @@ const roleCards = [
     desc: ROLE_DESCRIPTIONS_ID[USER_ROLES.ARTISAN],
     icon: <WrenchScrewdriverIcon className="w-6 h-6 text-wastra-brown-700" />,
   },
-  {
-    role: USER_ROLES.ADMIN,
-    title: ROLE_LABELS_ID[USER_ROLES.ADMIN],
-    desc: ROLE_DESCRIPTIONS_ID[USER_ROLES.ADMIN],
-    icon: <BuildingOffice2Icon className="w-6 h-6 text-wastra-brown-700" />,
-  },
 ]
 
 const AuthOnboarding = () => {
+  const token = localStorage.getItem("AUTH_TOKEN")
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const { isAuthenticated, login } = useUser()
   const redirect = params.get('redirect') || '/produk'
-  const [form] = Form.useForm()
-  const [loading, setLoading] = useState(false)
+
+  const isAuthenticated = !!token
 
   // Jika sudah login, langsung redirect ke halaman tujuan
   useEffect(() => {
@@ -60,28 +54,6 @@ const AuthOnboarding = () => {
     localStorage.setItem(AUTH_STORAGE_KEYS.ROLE, nextRole)
   }
 
-  const handleAdminLogin = async (values) => {
-    setLoading(true)
-    try {
-      // Simulasi login - dalam real app, ini akan call API
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Login dengan UserContext
-      login({
-        email: values.username,
-        role: USER_ROLES.ADMIN,
-        name: values.username, // Mock name from username
-      })
-      
-      message.success('Berhasil masuk')
-      navigate('/admin')
-    } catch (error) {
-      message.error('Gagal masuk. Silakan coba lagi.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="bg-wastra-brown-50 overflow-x-hidden w-full">
       <div className="w-full px-4 sm:px-6 max-w-3xl mx-auto py-8 sm:py-12">
@@ -99,13 +71,13 @@ const AuthOnboarding = () => {
               items={[
                 { title: 'Pilih Peran' },
                 { title: 'Ringkasan' },
-                { title: 'Masuk' },
+                { title: 'Daftar' },
               ]}
             />
 
             {step === 0 && (
               <div className="mt-8">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {roleCards.map((r) => {
                     const selected = r.role === role
                     return (
@@ -114,7 +86,7 @@ const AuthOnboarding = () => {
                         type="button"
                         onClick={() => saveRole(r.role)}
                         className={[
-                          'text-left rounded-2xl border p-5 transition-all',
+                          'text-left rounded-2xl border p-5 transition-all w-80',
                           selected
                             ? 'border-wastra-brown-400 bg-white shadow-sm'
                             : 'border-wastra-brown-100 bg-white hover:border-wastra-brown-200',
@@ -158,9 +130,9 @@ const AuthOnboarding = () => {
                   <div className="text-2xl font-semibold text-wastra-brown-800 mt-1">
                     {ROLE_LABELS_ID[role]}
                   </div>
-                  <div className="text-wastra-brown-600 mt-2">
+                  {/* <div className="text-wastra-brown-600 mt-2">
                     {ROLE_DESCRIPTIONS_ID[role]}
-                  </div>
+                  </div> */}
 
                   <ul className="mt-4 text-sm text-wastra-brown-700 list-disc pl-5 space-y-1">
                     {role === USER_ROLES.ARTISAN && (
@@ -173,15 +145,7 @@ const AuthOnboarding = () => {
                     {role === USER_ROLES.CUSTOMER && (
                       <>
                         <li>Jelajahi katalog & detail produk</li>
-                        <li>Simpan favorit (UI)</li>
-                        <li>Beli dengan alur yang jelas (checkout menyusul)</li>
-                      </>
-                    )}
-                    {role === USER_ROLES.ADMIN && (
-                      <>
-                        <li>Kelola produk & pengrajin (UI admin)</li>
-                        <li>Pantau ringkasan aktivitas</li>
-                        <li>Kontrol konten platform</li>
+                        <li>Beli dengan alur yang jelas</li>
                       </>
                     )}
                   </ul>
@@ -202,61 +166,7 @@ const AuthOnboarding = () => {
 
             {step === 2 && (
               <div className="mt-8">
-                {role === USER_ROLES.ADMIN ? (
-                  <>
-                    <div className="rounded-2xl border border-wastra-brown-100 bg-white p-6 mb-6">
-                      <div className="text-sm text-wastra-brown-600">Masuk sebagai</div>
-                      <div className="text-xl font-semibold text-wastra-brown-800 mt-1">
-                        {ROLE_LABELS_ID[role]}
-                      </div>
-                      <div className="text-wastra-brown-600 mt-2">
-                        Masukkan username dan password untuk masuk.
-                      </div>
-                    </div>
-
-                    <Form
-                      form={form}
-                      layout="vertical"
-                      onFinish={handleAdminLogin}
-                      className="mb-6"
-                    >
-                      <Form.Item
-                        name="username"
-                        label="Username"
-                        rules={[{ required: true, message: 'Masukkan username' }]}
-                      >
-                        <Input size="large" placeholder="username" />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="password"
-                        label="Kata Sandi"
-                        rules={[{ required: true, message: 'Masukkan kata sandi' }]}
-                      >
-                        <Input.Password size="large" placeholder="••••••••" />
-                      </Form.Item>
-
-                      <Form.Item>
-                        <Button
-                          htmlType="submit"
-                          type="primary"
-                          size="large"
-                          loading={loading}
-                          className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                        >
-                          Masuk
-                        </Button>
-                      </Form.Item>
-                    </Form>
-
-                    <div className="flex justify-between">
-                      <Button onClick={() => setStep(1)}>Kembali</Button>
-                      <Button type="link" onClick={() => navigate('/')} className="text-wastra-brown-600">
-                        Lewati dulu
-                      </Button>
-                    </div>
-                  </>
-                ) : (
+                {(
                   <>
                     <div className="rounded-2xl border border-wastra-brown-100 bg-white p-6">
                       <div className="text-sm text-wastra-brown-600">Lanjut sebagai</div>
@@ -264,7 +174,7 @@ const AuthOnboarding = () => {
                         {ROLE_LABELS_ID[role]}
                       </div>
                       <div className="text-wastra-brown-600 mt-2">
-                        Silakan masuk untuk melanjutkan.
+                        Silakan daftar untuk melanjutkan.
                       </div>
                     </div>
 
@@ -273,9 +183,9 @@ const AuthOnboarding = () => {
                         type="primary"
                         size="large"
                         className="w-full bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                        onClick={() => navigate(`/masuk?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
+                        onClick={() => navigate(`/daftar?role=${role}&redirect=${encodeURIComponent(redirect)}`)}
                       >
-                        Masuk
+                        Daftar
                       </Button>
                     </div>
 

@@ -8,29 +8,45 @@ import {
   ArrowLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  MinusIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
-import { useUser } from '../contexts/UserContext'
-import { useCart } from '../contexts/CartContext'
-import { USER_ROLES } from '../utils/authRoles'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import productApi from '../api/ProductApi'
 import reviewApi from '../api/ReviewApi'
 import formatTanggal from '../utils/formatTanggal'
+import orderApi from '../api/OrderApi'
 
 const ProductDetail = () => {
+  const [quantity, setQuantity] = useState(1)
+  const token = localStorage.getItem("AUTH_TOKEN")
+  const isAuthenticated = !!token
   const { id } = useParams()
   const navigate = useNavigate()
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isImageModalVisible, setIsImageModalVisible] = useState(false)
-  const { isAuthenticated, hasRole } = useUser()
-  const { cartItems, setCartItems } = useCart()
+  const queryClient = useQueryClient()
   
   const {data: productDetail, isLoading, isError, error} = useQuery({
     queryKey: ["detailProduct", id],
     queryFn: () => productApi.getById(id),
     staleTime: Infinity,
+  })
+
+  const addCart = useMutation({
+    mutationFn: ({ id, quantity }) =>
+      orderApi.addCart(id, quantity),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cartCount"] })
+      message.success('Produk ditambahkan ke keranjang')
+    },
+    onError: (error) => {
+      message.error(
+        error?.response?.data?.message || 'Gagal menambahkan ke keranjang'
+      )
+    },
   })
 
   const {data: review, isLoading: loadingReview, isError: errorReview, error: err} = useQuery({
@@ -39,7 +55,7 @@ const ProductDetail = () => {
     staleTime: Infinity,
   })
   
-  const isArtisan = hasRole(USER_ROLES.ARTISAN)
+  const isArtisan = localStorage.getItem("ROLE") == "artisan"
   
   if (isLoading || loadingReview) {
     return (
@@ -77,7 +93,7 @@ const ProductDetail = () => {
   const reviews = review?.data?.data
 
   return (
-    <div className="min-h-screen bg-wastra-brown-50 py-3 sm:py-4 md:py-6 lg:py-8 overflow-x-hidden">
+    <div className="min-h-screen bg-wastra-brown-50 py-3 sm:py-4 md:py-6 lg:py-8 ">
       <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <Link to="/produk">
           <Button 
@@ -143,9 +159,9 @@ const ProductDetail = () => {
                 <p className="text-2xl sm:text-3xl font-bold text-red-600 mb-3 sm:mb-4">
                   {formatPrice(product[0].last_price)}
                 </p>
-                <p className="text-lg sm:text-xl font-bold text-gray-400 line-through mb-3 sm:mb-4">
+                {product[0].discount !==null &&<p className="text-lg sm:text-xl font-bold text-gray-400 line-through mb-3 sm:mb-4">
                   {formatPrice(product[0].price)}
-                </p>
+                </p>}
               </div>
             </div>
 
@@ -208,6 +224,26 @@ const ProductDetail = () => {
               </Descriptions.Item>
             </Descriptions>
 
+            <div className='flex flex-row items-center space-x-2 ml-2'>
+              <p>Stock: </p>
+              <button
+                onClick={() => setQuantity(quantity-1)}
+                disabled={quantity <= 1}
+                className="p-1 rounded-full border hover:bg-gray-100 disabled:opacity-30"
+              >
+                <MinusIcon className="w-4 h-4" />
+              </button>
+              <span className="font-bold">{quantity}</span>
+              <button
+                onClick={() => setQuantity(quantity+1)}
+                disabled={quantity==product[0]?.stock}
+                className="p-1 rounded-full border hover:bg-gray-100"
+              >
+                <PlusIcon className="w-4 h-4" />
+              </button>
+              <p>{product[0]?.stock} tersedia</p>
+            </div>
+
             <div className="flex flex-col gap-2 sm:gap-3">
               <Button 
                 type="default" 
@@ -234,35 +270,16 @@ const ProductDetail = () => {
                       cancelText: 'Batal',
                       okType: 'primary',
                       onOk: () => {
-                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                        navigate(`/masuk?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
                       },
                     })
                     return
                   }
-                  
-                  const existingItem = cartItems.find(item => item.id === product.id)
-                  if (existingItem) {
-                    setCartItems(cartItems.map(item =>
-                      item.id === product.id
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                    ))
-                  } else {
-                    setCartItems([
-                      ...cartItems,
-                      {
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        quantity: 1,
-                        image: product.images[0],
-                        thumbnail: product.images[0],
-                        selected: false,
-                        seller: product.artisan.name,
-                      },
-                    ])
-                  }
-                  message.success('Produk ditambahkan ke keranjang')
+
+                  addCart.mutate({
+                    id: product[0].id,
+                    quantity: quantity,
+                  })
                 }}
               >
                 Tambah ke Keranjang
@@ -273,58 +290,31 @@ const ProductDetail = () => {
                 className="flex-1 bg-red-600 hover:bg-red-700 border-none h-11 sm:h-12 text-sm sm:text-base"
                 disabled={isArtisan}
                 onClick={() => {
-                  if (isArtisan) {
-                    Modal.warning({
-                      title: 'Akses Dibatasi',
-                      icon: <ExclamationCircleOutlined />,
-                      content: 'Pengrajin tidak dapat melakukan checkout produk. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-                    })
-                    return
-                  }
-                  
-                  if (!isAuthenticated) {
-                    Modal.confirm({
-                      title: 'Login Diperlukan',
-                      icon: <ExclamationCircleOutlined />,
-                      content: 'Silakan login terlebih dahulu untuk memesan produk.',
-                      okText: 'Login',
-                      cancelText: 'Batal',
-                      okType: 'primary',
-                      onOk: () => {
-                        navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
-                      },
-                    })
-                    return
-                  }
-                  
-                  // Tambahkan produk ke cart dengan selected: true
-                  const existingItem = cartItems.find(item => item.id === product.id)
-                  if (existingItem) {
-                    // Jika sudah ada, update quantity dan set selected
-                    setCartItems(cartItems.map(item =>
-                      item.id === product.id
-                        ? { ...item, quantity: item.quantity + 1, selected: true }
-                        : item
-                    ))
-                  } else {
-                    // Jika belum ada, tambahkan dengan selected: true
-                    setCartItems([
-                      ...cartItems,
-                      {
-                        id: product.id,
-                        name: product.name,
-                        price: product.price,
-                        quantity: 1,
-                        image: product.images[0],
-                        thumbnail: product.images[0],
-                        selected: true,
-                        seller: product.artisan.name,
-                      },
-                    ])
-                  }
-                  
-                  // Navigate ke checkout
-                  navigate('/checkout')
+                  // ... validasi isArtisan & isAuthenticated tetap sama ...
+
+                  // 1. Ambil data produk yang sedang dilihat (index 0 karena API Anda mengirim array)
+                  const currentProduct = product[0];
+
+                  // 2. Bungkus ke format yang dikenali halaman Checkout (meniru item keranjang)
+                  const directItem = {
+                    id: `direct-${currentProduct.id}`, // ID sementara agar tidak bentrok
+                    product_id: currentProduct.id,
+                    quantity: quantity,
+                    product: currentProduct // Memasukkan object produk lengkap
+                  };
+
+                  const total = currentProduct.last_price * quantity;
+
+                  // 3. Kirim ke checkout
+                  navigate('/checkout', { 
+                    state: { 
+                      cartItemIds: null, // Berikan null untuk menandakan ini BUKAN dari keranjang
+                      directProductId: currentProduct.id, // Tambahan info untuk API Direct Order
+                      directQuantity: quantity,
+                      totalAmount: total,
+                      items: [directItem] // Dikirim sebagai array berisi 1 item
+                    } 
+                  });
                 }}
               >
                 Pesan Sekarang

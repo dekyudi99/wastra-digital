@@ -6,7 +6,6 @@ import { useMutation } from '@tanstack/react-query'
 import authApi from '../api/AuthApi'
 import { AUTH_STORAGE_KEYS, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
 import { villages as importedVillages } from '../utils/indonesiaRegions'
-import { useUser } from '../contexts/UserContext'
 
 const { Dragger } = Upload
 
@@ -27,7 +26,6 @@ const RegisterPage = () => {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [ktpFile, setKtpFile] = useState(null)
-  const { login } = useUser()
 
   const role = useMemo(() => {
     return (
@@ -58,12 +56,8 @@ const RegisterPage = () => {
       const { token, user } = data
 
       // ✅ LOGIN OTOMATIS (INI KUNCI PERUBAHAN)
-      login({
-        token,
-        role: user.role,
-        emailVerified: Boolean(user.email_verified),
-        user,
-      })
+      localStorage.setItem("AUTH_TOKEN", token)
+      localStorage.setItem("ROLE", user.role)
 
       message.success('Akun berhasil dibuat. Silakan verifikasi OTP.')
       navigate('/otp', { replace: true })

@@ -1,20 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Table, Tag, Button, Space, Modal, Descriptions, message, Select } from 'antd'
-import {
-  ArrowLeftIcon,
-  EyeIcon,
-  TruckIcon,
-  CheckCircleIcon
-} from '@heroicons/react/24/outline'
-import { useUser } from '../contexts/UserContext'
+import { Card, Table, Tag, Button, Space, Modal, Descriptions, message, Select, Spin } from 'antd'
+import { ArrowLeftIcon, EyeIcon, TruckIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
-import { provinces, regencies, districts } from '../utils/indonesiaRegions'
+import orderApi from '../api/OrderApi'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const { Option } = Select
 
 const ORDER_STATUS = {
-  pending: { label: 'Menunggu Pembayaran', color: 'orange' },
+  unpaid: { label: 'Belum Bayar', color: 'orange' },
+  paid: { label: 'Sudah Bayar', color: 'processing' },
   processing: { label: 'Diproses', color: 'blue' },
   shipped: { label: 'Dikirim', color: 'cyan' },
   delivered: { label: 'Selesai', color: 'green' },
@@ -23,325 +19,111 @@ const ORDER_STATUS = {
 
 const ArtisanOrders = () => {
   const navigate = useNavigate()
-  const { id } = useParams()
-  const { user, orders, getOrderById, updateOrderStatus } = useUser()
-  const [selectedOrder, setSelectedOrder] = useState(null)
-  const [isModalVisible, setIsModalVisible] = useState(false)
+  const { id } = useParams() // 🔑 Mengambil ID dari URL untuk Modal
+  const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // Filter orders untuk pengrajin ini
-  let artisanOrders = orders.filter(order => 
-    order.items?.some(item => item.seller === user?.name) || 
-    order.seller === user?.name
-  )
+  // 1. DATA LIST PESANAN
+  const { data: orderResponse, isLoading: loadingList } = useQuery({
+    queryKey: ["ordersIn"],
+    queryFn: () => orderApi.orderIn(),
+  })
 
-  // Filter by status
-  if (statusFilter !== 'all') {
-    artisanOrders = artisanOrders.filter(o => o.status === statusFilter)
-  }
+  // 2. DATA DETAIL PESANAN (Aktif otomatis jika ada ID di URL)
+  const { data: detailResponse, isLoading: loadingDetail } = useQuery({
+    queryKey: ["orderDetail", id],
+    queryFn: () => orderApi.orderDetail(id),
+    enabled: !!id, // 🛡️ Hanya fetch jika ada ID di URL
+  })
 
-  // Load order detail if viewing single order
-  useEffect(() => {
-    if (id) {
-      const order = getOrderById(id)
-      if (order) {
-        setSelectedOrder(order)
-        setIsModalVisible(true)
-      }
-    }
-  }, [id, getOrderById])
+  const updateStatusMutation = useMutation({
+    mutationFn: ({ orderId, status }) => orderApi.updateStatus(orderId, status),
+    onSuccess: (res) => {
+      message.success(`Status berhasil diubah: ${res.data.message}`)
+      queryClient.invalidateQueries(["ordersIn"])
+      queryClient.invalidateQueries(["orderDetail", id])
+    },
+    onError: (err) => message.error(err.response?.data?.message || 'Gagal update status')
+  })
+
+  const artisanOrderItems = orderResponse?.data?.data || []
+  const selectedOrder = detailResponse?.data?.data
+  
+  // 🛡️ Pastikan data array sebelum filter
+  const safeOrderItems = Array.isArray(artisanOrderItems) ? artisanOrderItems : []
+  const filteredData = statusFilter === 'all' 
+    ? safeOrderItems 
+    : safeOrderItems.filter(item => item.order?.status === statusFilter)
 
   const columns = [
-    {
-      title: 'ID Pesanan',
-      dataIndex: 'id',
-      key: 'id',
-      render: (id) => `#${id.slice(0, 8)}`,
-    },
-    {
-      title: 'Pembeli',
-      dataIndex: 'customerName',
-      key: 'customerName',
-    },
-    {
-      title: 'Produk',
-      key: 'items',
-      render: (_, record) => {
-        const items = record.items || []
-        return (
-          <div>
-            {items.slice(0, 2).map((item, idx) => (
-              <div key={idx} className="text-sm">
-                {item.name} x{item.quantity}
-              </div>
-            ))}
-            {items.length > 2 && <div className="text-xs text-gray-500">+{items.length - 2} lainnya</div>}
-          </div>
-        )
-      },
-    },
-    {
-      title: 'Total',
-      dataIndex: 'total',
-      key: 'total',
-      render: (total) => formatPrice(total),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => {
-        const config = ORDER_STATUS[status] || { color: 'default', label: status }
-        return <Tag color={config.color}>{config.label}</Tag>
-      },
-    },
-    {
-      title: 'Tanggal',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString('id-ID', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      }),
-    },
-    {
-      title: 'Aksi',
-      key: 'action',
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeIcon className="w-4 h-4" />}
-            onClick={() => handleViewDetail(record.id)}
-          >
-            Detail
-          </Button>
-          {record.status === 'processing' && (
-            <Button
-              type="link"
-              size="small"
-              icon={<TruckIcon className="w-4 h-4" />}
-              onClick={() => handleUpdateStatus(record.id, 'shipped')}
-            >
-              Kirim
-            </Button>
-          )}
-          {record.status === 'shipped' && (
-            <Button
-              type="link"
-              size="small"
-              icon={<CheckCircleIcon className="w-4 h-4" />}
-              onClick={() => handleUpdateStatus(record.id, 'delivered')}
-            >
-              Selesai
-            </Button>
-          )}
-        </Space>
-      ),
-    },
+    { title: 'Invoice', dataIndex: ['order', 'invoice_number'], key: 'invoice', render: (t) => <span className="font-mono text-xs">{t}</span> },
+    { title: 'Pembeli', dataIndex: ['order', 'user', 'name'], key: 'customer', render: (n) => n || 'Pelanggan' },
+    { title: 'Produk', key: 'product', render: (_, r) => <div><div className="font-medium">{r.name_at_purchase}</div><div className="text-xs text-gray-400">Qty: {r.quantity}</div></div> },
+    { title: 'Subtotal', dataIndex: 'subtotal', key: 'subtotal', render: (t) => formatPrice(t) },
+    { title: 'Status', dataIndex: ['order', 'status'], key: 'status', render: (s) => <Tag color={ORDER_STATUS[s]?.color}>{ORDER_STATUS[s]?.label.toUpperCase()}</Tag> },
+    { title: 'Aksi', key: 'action', render: (_, r) => <Button type="link" icon={<EyeIcon className="w-4 h-4" />} onClick={() => navigate(`/pengrajin/pesanan/${r.order_id}`)}>Detail</Button> }
   ]
 
-  const handleViewDetail = (orderId) => {
-    const order = getOrderById(orderId)
-    setSelectedOrder(order)
-    setIsModalVisible(true)
-    navigate(`/pengrajin/pesanan/${orderId}`)
-  }
-
-  const handleUpdateStatus = (orderId, newStatus) => {
-    updateOrderStatus(orderId, newStatus)
-    message.success(`Status pesanan berhasil diubah menjadi ${ORDER_STATUS[newStatus]?.label}`)
-    
-    // Refresh selected order if open
-    if (selectedOrder && selectedOrder.id === orderId) {
-      const updatedOrder = getOrderById(orderId)
-      setSelectedOrder(updatedOrder)
-    }
-  }
-
-  const getProvinceName = (provinceId) => {
-    const province = provinces.find(p => p.id === provinceId)
-    return province?.name || provinceId
-  }
-
-  const getRegencyName = (regencyId) => {
-    const regency = regencies.find(r => r.id === regencyId)
-    return regency?.name || regencyId
-  }
-
-  const getDistrictName = (districtId) => {
-    const district = districts.find(d => d.id === districtId)
-    return district?.name || districtId
-  }
-
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
-      <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto py-6 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            {id && (
-              <Button
-                icon={<ArrowLeftIcon className="w-4 h-4" />}
-                onClick={() => navigate('/pengrajin/pesanan')}
-                className="mb-2"
-              >
-                Kembali
-              </Button>
-            )}
-            <h1 className="text-3xl font-semibold text-wastra-brown-800">
-              Kelola Pesanan
-            </h1>
-            <p className="text-wastra-brown-600 mt-2">
-              Kelola pesanan yang masuk dari pembeli
-            </p>
-          </div>
-        </div>
-
-        {/* Filter */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl">
-          <div className="flex items-center gap-4">
-            <span className="text-wastra-brown-700 font-medium">Filter Status:</span>
-            <Select
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: 200 }}
-            >
-              <Option value="all">Semua Status</Option>
-              <Option value="pending">Menunggu Pembayaran</Option>
-              <Option value="processing">Diproses</Option>
-              <Option value="shipped">Dikirim</Option>
-              <Option value="delivered">Selesai</Option>
-              <Option value="cancelled">Dibatalkan</Option>
+    <div className="bg-wastra-brown-50 min-h-screen w-full pb-10">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-wastra-brown-800 mb-6">Kelola Pesanan</h1>
+        
+        <Card className="mb-6 rounded-xl border-none shadow-sm">
+          <Space>
+            <span>Filter Status:</span>
+            <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 180 }}>
+              <Option value="all">Semua</Option>
+              {Object.entries(ORDER_STATUS).map(([k, v]) => <Option key={k} value={k}>{v.label}</Option>)}
             </Select>
-          </div>
+          </Space>
         </Card>
 
-        {/* Orders Table */}
-        {!id && (
-          <Card className="border border-wastra-brown-100 rounded-xl">
-            <Table
-              columns={columns}
-              dataSource={artisanOrders}
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-              locale={{
-                emptyText: 'Belum ada pesanan',
-              }}
-            />
-          </Card>
-        )}
+        <Card borderless className="rounded-xl shadow-sm">
+          <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loadingList} />
+        </Card>
 
-        {/* Order Detail Modal */}
+        {/* MODAL DETAIL - Terbuka jika parameter ID ada di URL */}
         <Modal
-          title={`Detail Pesanan #${selectedOrder?.id?.slice(0, 8)}`}
-          open={isModalVisible}
-          onCancel={() => {
-            setIsModalVisible(false)
-            navigate('/pengrajin/pesanan')
-          }}
+          title={`Pesanan: ${selectedOrder?.invoice_number || 'Memuat...'}`}
+          open={!!id}
+          onCancel={() => navigate('/pengrajin/pesanan')} // 🔑 Tutup modal = hapus ID di URL
           footer={null}
-          width={800}
+          width={750}
         >
-          {selectedOrder && (
-            <div>
-              <Descriptions bordered column={1} className="mb-4">
-                <Descriptions.Item label="ID Pesanan">
-                  #{selectedOrder.id.slice(0, 8)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Pembeli">
-                  {selectedOrder.customerName || 'N/A'}
-                </Descriptions.Item>
-                <Descriptions.Item label="Status">
-                  <Tag color={ORDER_STATUS[selectedOrder.status]?.color}>
-                    {ORDER_STATUS[selectedOrder.status]?.label}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Tanggal Pesanan">
-                  {new Date(selectedOrder.createdAt).toLocaleString('id-ID')}
-                </Descriptions.Item>
+          {loadingDetail ? <div className="py-10 text-center"><Spin /></div> : selectedOrder && (
+            <div className="space-y-6">
+              <Descriptions bordered column={1} size="small">
+                <Descriptions.Item label="Status"><Tag color={ORDER_STATUS[selectedOrder.status]?.color}>{ORDER_STATUS[selectedOrder.status]?.label}</Tag></Descriptions.Item>
+                <Descriptions.Item label="Pembeli">{selectedOrder.user?.name}</Descriptions.Item>
+                <Descriptions.Item label="Alamat">{selectedOrder.shipping_address}</Descriptions.Item>
               </Descriptions>
 
-              <div className="mb-4">
-                <h4 className="font-semibold mb-2">Produk yang Dipesan:</h4>
-                <div className="space-y-2">
-                  {(selectedOrder.items || []).map((item, idx) => (
-                    <div key={idx} className="flex justify-between p-2 bg-gray-50 rounded">
-                      <div>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm text-gray-600">Qty: {item.quantity}</div>
-                      </div>
-                      <div className="font-semibold">{formatPrice(item.price * item.quantity)}</div>
-                    </div>
-                  ))}
-                </div>
+              <Table
+                dataSource={selectedOrder.order_item}
+                rowKey="id"
+                pagination={false}
+                size="small"
+                columns={[
+                  { title: 'Produk', dataIndex: 'name_at_purchase' },
+                  { title: 'Harga', dataIndex: 'price_at_purchase', render: (v) => formatPrice(v) },
+                  { title: 'Qty', dataIndex: 'quantity' },
+                  { title: 'Subtotal', dataIndex: 'subtotal', render: (v) => formatPrice(v) },
+                ]}
+              />
+
+              <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
+                <span className="font-bold">Total Pendapatan:</span>
+                <span className="text-xl font-bold text-red-600">{formatPrice(selectedOrder.total_amount)}</span>
               </div>
 
-              <Descriptions bordered column={1} className="mb-4">
-                <Descriptions.Item label="Subtotal">
-                  {formatPrice(selectedOrder.subtotal || 0)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ongkos Kirim">
-                  {formatPrice(selectedOrder.shippingCost || 0)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Total">
-                  <span className="font-semibold text-lg">
-                    {formatPrice(selectedOrder.total || 0)}
-                  </span>
-                </Descriptions.Item>
-              </Descriptions>
-
-              {selectedOrder.shippingAddress && (
-                <div className="mb-4">
-                  <h4 className="font-semibold mb-2">Alamat Pengiriman:</h4>
-                  <div className="p-3 bg-gray-50 rounded">
-                    <div>{selectedOrder.shippingAddress.street}</div>
-                    <div>
-                      {selectedOrder.shippingAddress.district && 
-                        getDistrictName(selectedOrder.shippingAddress.district) + ', '}
-                      {selectedOrder.shippingAddress.regency && 
-                        getRegencyName(selectedOrder.shippingAddress.regency) + ', '}
-                      {selectedOrder.shippingAddress.province && 
-                        getProvinceName(selectedOrder.shippingAddress.province)}
-                      {selectedOrder.shippingAddress.postalCode && 
-                        ' ' + selectedOrder.shippingAddress.postalCode}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div className="flex gap-2 justify-end">
-                {selectedOrder.status === 'processing' && (
-                  <Button
-                    type="primary"
-                    icon={<TruckIcon className="w-4 h-4" />}
-                    onClick={() => {
-                      handleUpdateStatus(selectedOrder.id, 'shipped')
-                      setIsModalVisible(false)
-                      navigate('/pengrajin/pesanan')
-                    }}
-                    className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                  >
-                    Tandai Sebagai Dikirim
-                  </Button>
-                )}
-                {selectedOrder.status === 'shipped' && (
-                  <Button
-                    type="primary"
-                    icon={<CheckCircleIcon className="w-4 h-4" />}
-                    onClick={() => {
-                      handleUpdateStatus(selectedOrder.id, 'delivered')
-                      setIsModalVisible(false)
-                      navigate('/pengrajin/pesanan')
-                    }}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    Tandai Sebagai Selesai
-                  </Button>
-                )}
+              <div className="flex justify-end gap-3">
+                 {selectedOrder.status === 'paid' && (
+                   <Button type="primary" className="bg-blue-600" onClick={() => updateStatusMutation.mutate({ orderId: selectedOrder.id, status: 'processing' })}>Proses Pesanan</Button>
+                 )}
+                 {selectedOrder.status === 'processing' && (
+                   <Button type="primary" icon={<TruckIcon className="w-4 h-4"/>} className="bg-orange-600" onClick={() => updateStatusMutation.mutate({ orderId: selectedOrder.id, status: 'shipped' })}>Kirim Barang</Button>
+                 )}
               </div>
             </div>
           )}
@@ -352,4 +134,3 @@ const ArtisanOrders = () => {
 }
 
 export default ArtisanOrders
-

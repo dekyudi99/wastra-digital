@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom'
 import { Input, Avatar, Modal, Dropdown, Menu, message, Spin } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
@@ -8,49 +8,50 @@ import {
   MagnifyingGlassIcon, 
   ShoppingBagIcon, 
   UserIcon,
-  ShoppingCartIcon,
-  ChartBarIcon,
   ArrowRightOnRectangleIcon
 } from '@heroicons/react/24/outline'
-import { useUser } from '../contexts/UserContext'
-import { useCart } from '../contexts/CartContext'
-import { USER_ROLES } from '../utils/authRoles'
 import { useMutation } from '@tanstack/react-query'
 import authApi from '../api/AuthApi'
 import { useQuery } from '@tanstack/react-query'
 import orderApi from '../api/OrderApi'
+import IconWeb from '../assets/logoWastraDigital.png'
+import userApi from '../api/UserApi'
 
 const Header = () => {
+  const token = localStorage.getItem("AUTH_TOKEN");
   const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
-  const { user, isAuthenticated, hasRole, logout } = useUser()
-  const { cartItems } = useCart()
 
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
-      logout() // bersihkan context + localStorage
+      localStorage.removeItem("AUTH_TOKEN")
+      localStorage.removeItem("ROLE")
+      window.location.href = '/';
       message.success('Berhasil logout')
-      navigate('/', { replace: true })
     },
     onError: () => {
-      // Bahkan kalau API gagal, tetap logout di client
-      logout()
       navigate('/', { replace: true })
     },
   })
 
-  const {data: cartount, isLoading, isError} = useQuery({
+  const {data: cartount, isLoading} = useQuery({
     queryKey: ["cartCount"],
     queryFn: orderApi.cartCount,
+    retry: false,
+  })
+
+  const {data: userData, isLoading: loadingUser} = useQuery({
+    queryKey: ["user"],
+    queryFn: userApi.profile,
+    staleTime: Infinity,
+    retry: false,
   })
   
   // Hanya tampilkan cart count jika user sudah login
-  const cartCount = cartount?.data?.data?.total
-  const isArtisan = hasRole(USER_ROLES.ARTISAN)
-  const isAdmin = hasRole(USER_ROLES.ADMIN)
-  const isCustomer = hasRole(USER_ROLES.CUSTOMER)
+  const cartCount = cartount?.data?.data?.total || ''
+  const user = userData?.data?.data || ''
 
   const handleSearch = () => {
     if (searchValue.trim()) {
@@ -87,11 +88,14 @@ const Header = () => {
     ].join(' ')
   }
 
+  const isAuthenticated = !!token;
+
   return (
     <header className="bg-white sticky top-0 z-50 border-b border-wastra-brown-100">
       <div className="container mx-auto px-4 pr-14">
         <div className="flex items-center justify-between h-20 gap-6">
-          <Link to="/" className="flex-shrink-0 no-underline">
+          <Link to="/" className="flex-shrink-0 flex flex-row items-center gap-1 no-underline">
+            <img src={IconWeb} alt="" className='h-12'/>
             <div className="flex flex-col leading-tight">
               <div className="text-base font-semibold text-wastra-brown-800 tracking-tight">
                 Wastra Digital
@@ -125,20 +129,103 @@ const Header = () => {
 
           <div className="flex items-center gap-3">
             <nav className="hidden md:flex items-center gap-4 mr-10">
-              <Link to="/" className={navLinkClass('/', true)}>Beranda</Link>
-              <Link to="/produk" className={navLinkClass('/produk')}>Katalog Produk</Link>
-              {isArtisan && (
+              <NavLink 
+                to="/" 
+                end // Menggunakan 'end' agar rute '/' tidak aktif saat di sub-rute lain
+                className={({ isActive }) => 
+                  `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                    isActive 
+                      ? 'text-wastra-brown-800 underline font-semibold' 
+                      : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                  }`
+                }
+              >
+                Beranda
+              </NavLink>
+
+              <NavLink 
+                to="/produk" 
+                className={({ isActive }) => 
+                  `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                    isActive 
+                      ? 'text-wastra-brown-800 underline font-semibold' 
+                      : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                  }`
+                }
+              >
+                Katalog Produk
+              </NavLink>
+
+              {user?.role === "artisan" && (
                 <>
-                  <Link to="/pengrajin" className={navLinkClass('/pengrajin', true)}>Dashboard</Link>
-                  <Link to="/pengrajin/produk" className={navLinkClass('/pengrajin/produk')}>Kelola Produk</Link>
-                  <Link to="/pengrajin/pesanan" className={navLinkClass('/pengrajin/pesanan')}>Pesanan Masuk</Link>
+                  <NavLink 
+                    to="/pengrajin" 
+                    end
+                    className={({ isActive }) => 
+                      `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                        isActive 
+                          ? 'text-wastra-brown-800 underline font-semibold' 
+                          : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                      }`
+                    }
+                  >
+                    Dashboard
+                  </NavLink>
+                  <NavLink 
+                    to="/pengrajin/produk" 
+                    className={({ isActive }) => 
+                      `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                        isActive 
+                          ? 'text-wastra-brown-800 underline font-semibold' 
+                          : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                      }`
+                    }
+                  >
+                    Kelola Produk
+                  </NavLink>
+                  <NavLink 
+                    to="/pengrajin/pesanan" 
+                    className={({ isActive }) => 
+                      `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                        isActive 
+                          ? 'text-wastra-brown-800 underline font-semibold' 
+                          : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                      }`
+                    }
+                  >
+                    Pesanan Masuk
+                  </NavLink>
                 </>
               )}
-              {isAdmin && (
-                <Link to="/admin" className={navLinkClass('/admin')}>Dashboard Admin</Link>
+
+              {user?.role === "admin" && (
+                <NavLink 
+                  to="/admin" 
+                  className={({ isActive }) => 
+                    `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                      isActive 
+                        ? 'text-wastra-brown-800 underline font-semibold' 
+                        : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                    }`
+                  }
+                >
+                  Dashboard Admin
+                </NavLink>
               )}
+
               {!isAuthenticated && (
-                <Link to="/onboarding" className={navLinkClass('/onboarding')}>Masuk</Link>
+                <NavLink 
+                  to="/masuk" 
+                  className={({ isActive }) => 
+                    `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                      isActive 
+                        ? 'text-wastra-brown-800 underline font-semibold' 
+                        : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                    }`
+                  }
+                >
+                  Masuk
+                </NavLink>
               )}
             </nav>
 
@@ -157,7 +244,7 @@ const Header = () => {
                       cancelText: 'Batal',
                       okType: 'primary',
                       onOk: () => {
-                        navigate(`/onboarding?redirect=${encodeURIComponent('/notifications')}`)
+                        navigate(`/masuk?redirect=${encodeURIComponent('/notifications')}`)
                       },
                     })
                     return
@@ -176,13 +263,13 @@ const Header = () => {
                   if (!isAuthenticated) {
                     Modal.confirm({
                       title: 'Login Diperlukan',
-                      icon: <ExclamationCircleOutlined />,
+                      icon: <ExclamationCircleOutlined/>,
                       content: 'Silakan login terlebih dahulu untuk melihat keranjang.',
                       okText: 'Login',
                       cancelText: 'Batal',
                       okType: 'primary',
                       onOk: () => {
-                        navigate(`/onboarding?redirect=${encodeURIComponent('/keranjang')}`)
+                        navigate(`/masuk?redirect=${encodeURIComponent('/keranjang')}`)
                       },
                     })
                     return
@@ -210,7 +297,7 @@ const Header = () => {
                       <Menu.Item 
                         key="profile"
                         onClick={() => {
-                          if (isArtisan) {
+                          if (user.role == "artisan") {
                             navigate('/pengrajin/profil')
                           } else {
                             navigate('/profil')
@@ -253,8 +340,8 @@ const Header = () => {
                     type="button"
                     className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
                   >
-                    {user?.avatar ? (
-                      <Avatar src={user.avatar} size={32} />
+                    {user?.profile? (
+                      <Avatar src={user?.profile} size={32} />
                     ) : (
                       <UserIcon className="w-5 h-5" />
                     )}
@@ -262,7 +349,7 @@ const Header = () => {
                 </Dropdown>
               ) : (
                 <Link
-                  to="/onboarding"
+                  to="/masuk"
                   className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
                 >
                   <UserIcon className="w-5 h-5" />

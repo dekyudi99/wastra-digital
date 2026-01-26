@@ -1,19 +1,18 @@
 import { redirect } from "react-router-dom"
+import { message } from "antd"
 
 const roleGuard = (requiredRole) => () => {
-  const user = JSON.parse(
-    localStorage.getItem('wastra.user')
-  )
+  const token = localStorage.getItem("AUTH_TOKEN")
 
-  const role = localStorage.getItem('wastra.role')
+  const role = localStorage.getItem("ROLE")
 
-  // ❌ belum login
-  if (!user?.token) {
-    throw redirect('/login')
+  if (!token) {
+    message.warning('Login terlebih dahulu untuk mengakses halaman itu!')
+    throw redirect('/masuk')
   }
 
-  // ❌ role tidak sesuai
   if (role !== requiredRole) {
+    message.warning('Anda tidak bisa mengakses halaman ini!')
     throw redirect('/')
   }
 

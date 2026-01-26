@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Row, Col, Statistic, Table, Tag, Button, Space } from 'antd'
+import { Card, Row, Col, Statistic, Table, Tag, Button, Spin } from 'antd'
 import {
   ShoppingBagIcon,
   CurrencyDollarIcon,
@@ -8,271 +7,190 @@ import {
   ClockIcon,
   EyeIcon
 } from '@heroicons/react/24/outline'
-import { useUser } from '../contexts/UserContext'
+import { useQuery } from '@tanstack/react-query'
+
 import { formatPrice } from '../utils/format'
+import userApi from '../api/UserApi'
+import orderApi from '../api/OrderApi'
 
 const ArtisanDashboard = () => {
   const navigate = useNavigate()
-  const { user, orders } = useUser()
 
-  // Filter orders untuk pengrajin ini (berdasarkan seller/artisan)
-  const artisanOrders = orders.filter(order => 
-    order.items?.some(item => item.seller === user?.name) || 
-    order.seller === user?.name
-  )
+  const { data: userData, isLoading: loadingUser } = useQuery({
+    queryKey: ["userProfile"],
+    queryFn: async () => {
+      const res = await userApi.profile()
+      return res.data.data
+    },
+  })
 
-  // Statistik
-  const totalProducts = 12 // Mock - akan dari context nanti
-  const totalOrders = artisanOrders.length
-  const pendingOrders = artisanOrders.filter(o => o.status === 'pending' || o.status === 'processing').length
-  const totalRevenue = artisanOrders
-    .filter(o => o.status !== 'cancelled')
-    .reduce((sum, order) => sum + (order.total || 0), 0)
+  const { data: orderResponse, isLoading: loadingOrder } = useQuery({
+    queryKey: ["ordersIn"],
+    queryFn: () => orderApi.orderIn(),
+  })
 
-  // Distribusi status untuk pie
+  const artisanOrderItems = orderResponse?.data?.data || []
+  // 🛡️ Pastikan data adalah array untuk mencegah error ".filter is not a function"
+  const safeItems = Array.isArray(artisanOrderItems) ? artisanOrderItems : []
+
   const statusConfig = {
-    pending: { color: '#F59E0B', label: 'Menunggu' },
-    processing: { color: '#3B82F6', label: 'Diproses' },
-    shipped: { color: '#22C55E', label: 'Dikirim' },
-    delivered: { color: '#0EA5E9', label: 'Selesai' },
-    cancelled: { color: '#EF4444', label: 'Batal' },
+    unpaid: { color: 'warning', label: 'Belum Bayar', hex: '#F59E0B' },
+    paid: { color: 'processing', label: 'Sudah Bayar', hex: '#3B82F6' },
+    processing: { color: 'blue', label: 'Diproses', hex: '#8B5CF6' },
+    shipped: { color: 'cyan', label: 'Dikirim', hex: '#22C55E' },
+    delivered: { color: 'success', label: 'Selesai', hex: '#0EA5E9' },
+    cancelled: { color: 'error', label: 'Batal', hex: '#EF4444' },
   }
+
+  // LOGIKA STATISTIK DENGAN DATA AMAN
+  const totalRevenue = safeItems
+    .filter(item => item.order?.status !== 'cancelled')
+    .reduce((sum, item) => sum + (item.subtotal || 0), 0)
+
+  const pendingOrdersCount = safeItems.filter(item => 
+    ['paid', 'unpaid', 'processing'].includes(item.order?.status)
+  ).length
+
+  const uniqueProductsSold = [...new Set(safeItems.map(item => item.product_id))].length
+
+  // CHART LOGIC
+  const statusCounts = safeItems.reduce((acc, item) => {
+    const status = item.order?.status || 'unpaid'
+    acc[status] = (acc[status] || 0) + 1
+    return acc
+  }, {})
+
   const statusData = Object.entries(statusConfig).map(([key, meta]) => ({
     status: key,
     ...meta,
-    value: artisanOrders.filter(o => o.status === key).length,
+    value: statusCounts[key] || 0,
   })).filter(item => item.value > 0)
+
   const statusTotal = statusData.reduce((sum, item) => sum + item.value, 0)
 
-  // Utility untuk membuat path pie sederhana (donut)
-  const buildArc = (startAngle, endAngle, radiusOuter = 70, radiusInner = 40, cx = 80, cy = 80) => {
-    const polarToCartesian = (r, angleDeg) => {
-      const rad = (angleDeg - 90) * (Math.PI / 180)
-      return {
-        x: cx + r * Math.cos(rad),
-        y: cy + r * Math.sin(rad),
-      }
+  const buildArc = (startAngle, endAngle) => {
+    const cx = 80, cy = 80, rOut = 70, rIn = 45
+    const polarToCartesian = (r, deg) => {
+      const rad = (deg - 90) * (Math.PI / 180)
+      return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) }
     }
     const largeArc = endAngle - startAngle <= 180 ? 0 : 1
-    const startOuter = polarToCartesian(radiusOuter, endAngle)
-    const endOuter = polarToCartesian(radiusOuter, startAngle)
-    const startInner = polarToCartesian(radiusInner, startAngle)
-    const endInner = polarToCartesian(radiusInner, endAngle)
-
-    return [
-      'M', startOuter.x, startOuter.y,
-      'A', radiusOuter, radiusOuter, 0, largeArc, 0, endOuter.x, endOuter.y,
-      'L', startInner.x, startInner.y,
-      'A', radiusInner, radiusInner, 0, largeArc, 1, endInner.x, endInner.y,
-      'Z',
-    ].join(' ')
+    const p1 = polarToCartesian(rOut, endAngle), p2 = polarToCartesian(rOut, startAngle)
+    const p3 = polarToCartesian(rIn, startAngle), p4 = polarToCartesian(rIn, endAngle)
+    return `M ${p1.x} ${p1.y} A ${rOut} ${rOut} 0 ${largeArc} 0 ${p2.x} ${p2.y} L ${p3.x} ${p3.y} A ${rIn} ${rIn} 0 ${largeArc} 1 ${p4.x} ${p4.y} Z`
   }
 
   const pieSlices = (() => {
-    if (!statusTotal) return []
     let currentAngle = 0
     return statusData.map(item => {
       const angle = (item.value / statusTotal) * 360
-      const slice = {
-        ...item,
-        startAngle: currentAngle,
-        endAngle: currentAngle + angle,
-      }
+      const slice = { ...item, startAngle: currentAngle, endAngle: currentAngle + angle }
       currentAngle += angle
       return slice
     })
   })()
 
-  // Recent orders untuk tabel
-  const recentOrders = artisanOrders
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5)
-
   const columns = [
     {
-      title: 'ID Pesanan',
-      dataIndex: 'id',
-      key: 'id',
-      render: (id) => `#${id.slice(0, 8)}`,
+      title: 'Invoice',
+      dataIndex: ['order', 'invoice_number'],
+      key: 'invoice',
+      render: (text) => <span className="font-mono text-xs text-gray-500">{text}</span>,
+    },
+    {
+      title: 'Produk',
+      key: 'product',
+      render: (_, record) => (
+        <div>
+          <div className="font-medium text-wastra-brown-800">{record.name_at_purchase}</div>
+          <div className="text-xs text-gray-400">Qty: {record.quantity}</div>
+        </div>
+      )
     },
     {
       title: 'Pembeli',
-      dataIndex: 'customerName',
-      key: 'customerName',
+      dataIndex: ['order', 'user', 'name'],
+      key: 'customer',
+      render: (name) => <span className="text-sm">{name || 'Customer'}</span>
     },
     {
-      title: 'Total',
-      dataIndex: 'total',
-      key: 'total',
-      render: (total) => formatPrice(total),
+      title: 'Subtotal',
+      dataIndex: 'subtotal',
+      key: 'subtotal',
+      render: (val) => <span className="font-bold">{formatPrice(val)}</span>,
     },
     {
       title: 'Status',
-      dataIndex: 'status',
+      dataIndex: ['order', 'status'],
       key: 'status',
       render: (status) => {
-        const statusConfig = {
-          pending: { color: 'orange', label: 'Menunggu Pembayaran' },
-          processing: { color: 'blue', label: 'Diproses' },
-          shipped: { color: 'cyan', label: 'Dikirim' },
-          delivered: { color: 'green', label: 'Selesai' },
-          cancelled: { color: 'red', label: 'Dibatalkan' },
-        }
         const config = statusConfig[status] || { color: 'default', label: status }
-        return <Tag color={config.color}>{config.label}</Tag>
+        return <Tag color={config.color}>{config.label.toUpperCase()}</Tag>
       },
-    },
-    {
-      title: 'Tanggal',
-      dataIndex: 'createdAt',
-      key: 'createdAt',
-      render: (date) => new Date(date).toLocaleDateString('id-ID'),
     },
     {
       title: 'Aksi',
       key: 'action',
       render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            size="small"
-            icon={<EyeIcon className="w-4 h-4" />}
-            onClick={() => navigate(`/pengrajin/pesanan/${record.id}`)}
-          >
-            Detail
-          </Button>
-        </Space>
+        <Button
+          type="link"
+          icon={<EyeIcon className="w-4 h-4" />}
+          onClick={() => navigate(`/pengrajin/pesanan/${record.order_id}`)}
+        >
+          Detail
+        </Button>
       ),
     },
   ]
 
+  if (loadingUser || loadingOrder) return <div className="h-screen flex justify-center items-center"><Spin size="large" /></div>
+
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
-      <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto py-6 sm:py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-semibold text-wastra-brown-800">Dashboard Pengrajin</h1>
-          <p className="text-wastra-brown-600 mt-2">
-            Kelola produk dan pesanan Anda dengan mudah
-          </p>
+    <div className="bg-wastra-brown-50 min-h-screen pb-12">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-wastra-brown-900">Dashboard Pengrajin</h1>
+          <p className="text-wastra-brown-600">Selamat datang, {userData?.name}.</p>
         </div>
 
-        {/* Statistik Cards */}
-        <Row gutter={[16, 16]} className="mb-6">
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border border-wastra-brown-100 rounded-xl">
-              <Statistic
-                title="Total Produk"
-                value={totalProducts}
-                prefix={<ShoppingBagIcon className="w-5 h-5 text-wastra-brown-600" />}
-                valueStyle={{ color: '#78350F' }}
-              />
+        <Row gutter={[16, 16]} className="mb-8">
+          <Col xs={24} sm={12} lg={6}><Card borderless className="shadow-sm rounded-xl"><Statistic title="Produk Terjual" value={safeItems.length} prefix={<ShoppingBagIcon className="w-5 h-5 text-amber-600" />} /></Card></Col>
+          <Col xs={24} sm={12} lg={6}><Card borderless className="shadow-sm rounded-xl"><Statistic title="Pesanan Aktif" value={pendingOrdersCount} valueStyle={{ color: '#F59E0B' }} prefix={<ClockIcon className="w-5 h-5" />} /></Card></Col>
+          <Col xs={24} sm={12} lg={6}><Card borderless className="shadow-sm rounded-xl"><Statistic title="Total Pendapatan" value={totalRevenue} formatter={(v) => formatPrice(v)} valueStyle={{ color: '#059669' }} prefix={<CurrencyDollarIcon className="w-5 h-5" />} /></Card></Col>
+          <Col xs={24} sm={12} lg={6}><Card borderless className="shadow-sm rounded-xl"><Statistic title="Jenis Produk" value={uniqueProductsSold} prefix={<ChartBarIcon className="w-5 h-5 text-blue-600" />} /></Card></Col>
+        </Row>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={8}>
+            <Card title="Distribusi Pesanan" className="shadow-sm rounded-xl h-full">
+              {statusTotal === 0 ? <div className="text-center py-20 text-gray-400">Belum ada data</div> : (
+                <div className="flex flex-col items-center">
+                  <svg width="160" height="160" viewBox="0 0 160 160">
+                    {pieSlices.map(slice => <path key={slice.status} d={buildArc(slice.startAngle, slice.endAngle)} fill={slice.hex} stroke="#fff" strokeWidth="2" />)}
+                    <circle cx="80" cy="80" r="32" fill="#fff" />
+                    <text x="80" y="85" textAnchor="middle" className="text-xl font-bold fill-gray-700">{statusTotal}</text>
+                  </svg>
+                  <div className="w-full mt-6 space-y-2">
+                    {statusData.map(s => (
+                      <div key={s.status} className="flex justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.hex }} /><span>{s.label}</span></div>
+                        <span className="font-bold">{s.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border border-wastra-brown-100 rounded-xl">
-              <Statistic
-                title="Total Pesanan"
-                value={totalOrders}
-                prefix={<ChartBarIcon className="w-5 h-5 text-wastra-brown-600" />}
-                valueStyle={{ color: '#78350F' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border border-wastra-brown-100 rounded-xl">
-              <Statistic
-                title="Pesanan Pending"
-                value={pendingOrders}
-                prefix={<ClockIcon className="w-5 h-5 text-wastra-brown-600" />}
-                valueStyle={{ color: '#F59E0B' }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card className="border border-wastra-brown-100 rounded-xl">
-              <Statistic
-                title="Total Pendapatan"
-                value={totalRevenue}
-                prefix={<CurrencyDollarIcon className="w-5 h-5 text-wastra-brown-600" />}
-                formatter={(value) => formatPrice(value)}
-                valueStyle={{ color: '#059669' }}
-              />
+          <Col xs={24} lg={16}>
+            <Card title="Pesanan Terbaru" className="shadow-sm rounded-xl h-full" extra={<Button type="link" onClick={() => navigate('/pengrajin/pesanan')}>Lihat Semua</Button>}>
+              <Table columns={columns} dataSource={safeItems.slice(0, 5)} rowKey="id" pagination={false} />
             </Card>
           </Col>
         </Row>
-
-        {/* Pie Chart Status Pesanan */}
-        <Card className="mb-6 border border-wastra-brown-100 rounded-xl" title="Distribusi Status Pesanan">
-          {statusTotal === 0 ? (
-            <div className="text-center py-6 text-wastra-brown-500">
-              Belum ada pesanan untuk ditampilkan
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-6 items-center">
-              <div className="relative" style={{ width: 160, height: 160 }}>
-                <svg width="160" height="160" viewBox="0 0 160 160">
-                  {pieSlices.map((slice, idx) => (
-                    <path
-                      key={slice.status}
-                      d={buildArc(slice.startAngle, slice.endAngle)}
-                      fill={slice.color}
-                      stroke="#fff"
-                      strokeWidth="2"
-                      style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.08))' }}
-                    />
-                  ))}
-                  <circle cx="80" cy="80" r="28" fill="#fff" />
-                  <text x="80" y="76" textAnchor="middle" className="text-sm font-semibold fill-wastra-brown-800">
-                    {totalOrders}
-                  </text>
-                  <text x="80" y="94" textAnchor="middle" className="text-[10px] fill-wastra-brown-500">
-                    total
-                  </text>
-                </svg>
-              </div>
-              <div className="flex-1 min-w-[200px] grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {pieSlices.map(slice => (
-                  <div key={slice.status} className="flex items-center gap-3 px-3 py-2 rounded-lg border border-wastra-brown-100">
-                    <span className="w-3 h-3 rounded-full" style={{ background: slice.color }} />
-                    <div className="flex-1">
-                      <div className="text-sm font-semibold text-wastra-brown-800">{slice.label}</div>
-                      <div className="text-xs text-wastra-brown-500">
-                        {slice.value} pesanan ({Math.round((slice.value / statusTotal) * 100)}%)
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* Recent Orders */}
-        <Card
-          title="Pesanan Terbaru"
-          className="border border-wastra-brown-100 rounded-xl"
-          extra={
-            <Button type="link" onClick={() => navigate('/pengrajin/pesanan')}>
-              Lihat Semua
-            </Button>
-          }
-        >
-          <Table
-            columns={columns}
-            dataSource={recentOrders}
-            rowKey="id"
-            pagination={false}
-            locale={{
-              emptyText: 'Belum ada pesanan',
-            }}
-          />
-        </Card>
       </div>
     </div>
   )
 }
 
 export default ArtisanDashboard
-
-

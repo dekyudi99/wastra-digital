@@ -1,15 +1,11 @@
-import { RouterProvider } from 'react-router-dom';
-import routes from './router/routes';
-import { UserProvider } from './contexts/UserContext';
-import { CartProvider } from './contexts/CartContext';
+import { RouterProvider } from 'react-router-dom'
+import routes from './router/routes'
 
 function App() {
   return (
-    <UserProvider>
-      <CartProvider>
-        <RouterProvider router={routes} />
-      </CartProvider>
-    </UserProvider>
+    <div>
+      <RouterProvider router={routes} />
+    </div>
   );
 }
 

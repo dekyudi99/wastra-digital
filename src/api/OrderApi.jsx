@@ -25,6 +25,15 @@ const orderApi = {
     directOrder: (id, request) => {
         return axiosClient.post(`order/direct/${id}`, request)
     },
+    orderIn: () => {
+        return axiosClient.get('order/in')
+    },
+    orderDetail: (id) => {
+        return axiosClient.get(`order/show/${id}`)
+    },
+    updateStatus: (id, status) => {
+        return axiosClient.put(`order/update-status/${id}`, { status });
+    },
 }
 
 export default orderApi
