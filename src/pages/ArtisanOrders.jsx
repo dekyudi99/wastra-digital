@@ -1,16 +1,16 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card, Table, Tag, Button, Space, Modal, Descriptions, message, Select, Spin } from 'antd'
-import { ArrowLeftIcon, EyeIcon, TruckIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, TruckIcon } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
 import orderApi from '../api/OrderApi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const { Option } = Select
 
-const ORDER_STATUS = {
+const STATUS_MAP = {
   unpaid: { label: 'Belum Bayar', color: 'orange' },
-  paid: { label: 'Sudah Bayar', color: 'processing' },
+  paid: { label: 'Menunggu', color: 'processing' }, // Tampil sebagai Menunggu
   processing: { label: 'Diproses', color: 'blue' },
   shipped: { label: 'Dikirim', color: 'cyan' },
   delivered: { label: 'Selesai', color: 'green' },
@@ -19,111 +19,125 @@ const ORDER_STATUS = {
 
 const ArtisanOrders = () => {
   const navigate = useNavigate()
-  const { id } = useParams() // 🔑 Mengambil ID dari URL untuk Modal
+  const { id } = useParams()
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('all')
 
-  // 1. DATA LIST PESANAN
   const { data: orderResponse, isLoading: loadingList } = useQuery({
     queryKey: ["ordersIn"],
     queryFn: () => orderApi.orderIn(),
   })
 
-  // 2. DATA DETAIL PESANAN (Aktif otomatis jika ada ID di URL)
   const { data: detailResponse, isLoading: loadingDetail } = useQuery({
     queryKey: ["orderDetail", id],
     queryFn: () => orderApi.orderDetail(id),
-    enabled: !!id, // 🛡️ Hanya fetch jika ada ID di URL
+    enabled: !!id,
   })
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ orderId, status }) => orderApi.updateStatus(orderId, status),
-    onSuccess: (res) => {
-      message.success(`Status berhasil diubah: ${res.data.message}`)
+    mutationFn: ({ orderItemId, status }) => orderApi.updateStatus(orderItemId, status),
+    onSuccess: () => {
+      message.success(`Status item diperbarui`)
       queryClient.invalidateQueries(["ordersIn"])
       queryClient.invalidateQueries(["orderDetail", id])
     },
     onError: (err) => message.error(err.response?.data?.message || 'Gagal update status')
   })
 
-  const artisanOrderItems = orderResponse?.data?.data || []
-  const selectedOrder = detailResponse?.data?.data
-  
-  // 🛡️ Pastikan data array sebelum filter
-  const safeOrderItems = Array.isArray(artisanOrderItems) ? artisanOrderItems : []
+  const orders = Array.isArray(orderResponse?.data?.data) ? orderResponse.data.data : []
   const filteredData = statusFilter === 'all' 
-    ? safeOrderItems 
-    : safeOrderItems.filter(item => item.order?.status === statusFilter)
+    ? orders 
+    : orders.filter(o => o.status === statusFilter)
+
+  const orderDetail = detailResponse?.data?.data // Merujuk pada objek Order dari backend
 
   const columns = [
-    { title: 'Invoice', dataIndex: ['order', 'invoice_number'], key: 'invoice', render: (t) => <span className="font-mono text-xs">{t}</span> },
-    { title: 'Pembeli', dataIndex: ['order', 'user', 'name'], key: 'customer', render: (n) => n || 'Pelanggan' },
-    { title: 'Produk', key: 'product', render: (_, r) => <div><div className="font-medium">{r.name_at_purchase}</div><div className="text-xs text-gray-400">Qty: {r.quantity}</div></div> },
-    { title: 'Subtotal', dataIndex: 'subtotal', key: 'subtotal', render: (t) => formatPrice(t) },
-    { title: 'Status', dataIndex: ['order', 'status'], key: 'status', render: (s) => <Tag color={ORDER_STATUS[s]?.color}>{ORDER_STATUS[s]?.label.toUpperCase()}</Tag> },
-    { title: 'Aksi', key: 'action', render: (_, r) => <Button type="link" icon={<EyeIcon className="w-4 h-4" />} onClick={() => navigate(`/pengrajin/pesanan/${r.order_id}`)}>Detail</Button> }
+    { title: 'Invoice', dataIndex: 'invoice_number', key: 'inv', render: (t) => <span className="font-mono">{t}</span> },
+    { title: 'Pembeli', dataIndex: ['user', 'name'], key: 'cust' },
+    { title: 'Tanggal', dataIndex: 'created_at', render: (d) => new Date(d).toLocaleDateString('id-ID') },
+    { 
+      title: 'Status', 
+      dataIndex: 'status', 
+      render: (s) => <Tag color={STATUS_MAP[s]?.color}>{STATUS_MAP[s]?.label.toUpperCase()}</Tag> 
+    },
+    { 
+      title: 'Aksi', 
+      key: 'action', 
+      render: (_, r) => (
+        <Button icon={<EyeIcon className="w-4 h-4" />} onClick={() => navigate(`/pengrajin/pesanan/${r.id}`)}>
+          Detail
+        </Button>
+      ) 
+    }
   ]
 
   return (
     <div className="bg-wastra-brown-50 min-h-screen w-full pb-10">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-wastra-brown-800 mb-6">Kelola Pesanan</h1>
-        
-        <Card className="mb-6 rounded-xl border-none shadow-sm">
-          <Space>
-            <span>Filter Status:</span>
-            <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 180 }}>
-              <Option value="all">Semua</Option>
-              {Object.entries(ORDER_STATUS).map(([k, v]) => <Option key={k} value={k}>{v.label}</Option>)}
-            </Select>
-          </Space>
-        </Card>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-wastra-brown-800">Daftar Pesanan Masuk</h1>
+          <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 200 }}>
+            <Option value="all">Semua Pesanan</Option>
+            {Object.entries(STATUS_MAP).map(([k, v]) => <Option key={k} value={k}>{v.label}</Option>)}
+          </Select>
+        </div>
 
-        <Card borderless className="rounded-xl shadow-sm">
+        <Card borderless className="shadow-sm rounded-xl">
           <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loadingList} />
         </Card>
 
-        {/* MODAL DETAIL - Terbuka jika parameter ID ada di URL */}
         <Modal
-          title={`Pesanan: ${selectedOrder?.invoice_number || 'Memuat...'}`}
+          title={orderDetail ? `Invoice: ${orderDetail.invoice_number}` : "Memuat..."}
           open={!!id}
-          onCancel={() => navigate('/pengrajin/pesanan')} // 🔑 Tutup modal = hapus ID di URL
+          onCancel={() => navigate('/pengrajin/pesanan')}
           footer={null}
-          width={750}
+          width={800}
         >
-          {loadingDetail ? <div className="py-10 text-center"><Spin /></div> : selectedOrder && (
+          {loadingDetail ? <div className="text-center p-10"><Spin /></div> : orderDetail && (
             <div className="space-y-6">
               <Descriptions bordered column={1} size="small">
-                <Descriptions.Item label="Status"><Tag color={ORDER_STATUS[selectedOrder.status]?.color}>{ORDER_STATUS[selectedOrder.status]?.label}</Tag></Descriptions.Item>
-                <Descriptions.Item label="Pembeli">{selectedOrder.user?.name}</Descriptions.Item>
-                <Descriptions.Item label="Alamat">{selectedOrder.shipping_address}</Descriptions.Item>
+                <Descriptions.Item label="Nama Pembeli">{orderDetail.user?.name}</Descriptions.Item>
+                <Descriptions.Item label="Alamat Pengiriman">{orderDetail.shipping_address}</Descriptions.Item>
               </Descriptions>
 
+              <h3 className="font-bold text-lg border-b pb-2">Produk Milik Anda</h3>
               <Table
-                dataSource={selectedOrder.order_item}
+                dataSource={orderDetail.item} // Mengambil dari array 'item'
                 rowKey="id"
                 pagination={false}
-                size="small"
                 columns={[
                   { title: 'Produk', dataIndex: 'name_at_purchase' },
-                  { title: 'Harga', dataIndex: 'price_at_purchase', render: (v) => formatPrice(v) },
-                  { title: 'Qty', dataIndex: 'quantity' },
+                  { title: 'Qty', dataIndex: 'quantity', align: 'center' },
                   { title: 'Subtotal', dataIndex: 'subtotal', render: (v) => formatPrice(v) },
+                  { 
+                    title: 'Status Item', 
+                    dataIndex: 'status', 
+                    render: (s) => <Tag color={STATUS_MAP[s].color}>{STATUS_MAP[s].label}</Tag> 
+                  },
+                  { 
+                    title: 'Aksi', 
+                    key: 'ops', 
+                    render: (_, item) => (
+                      <Space>
+                        {item.status === 'paid' && (
+                          <Button size="small" type="primary" onClick={() => updateStatusMutation.mutate({ orderItemId: item.id, status: 'processing' })}>Proses</Button>
+                        )}
+                        {item.status === 'processing' && (
+                          <Button size="small" className="bg-orange-500 text-white border-none" icon={<TruckIcon className="w-4 h-4 inline-block mr-1"/>} onClick={() => updateStatusMutation.mutate({ orderItemId: item.id, status: 'shipped' })}>Kirim</Button>
+                        )}
+                      </Space>
+                    )
+                  }
                 ]}
               />
 
-              <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
-                <span className="font-bold">Total Pendapatan:</span>
-                <span className="text-xl font-bold text-red-600">{formatPrice(selectedOrder.total_amount)}</span>
-              </div>
-
-              <div className="flex justify-end gap-3">
-                 {selectedOrder.status === 'paid' && (
-                   <Button type="primary" className="bg-blue-600" onClick={() => updateStatusMutation.mutate({ orderId: selectedOrder.id, status: 'processing' })}>Proses Pesanan</Button>
-                 )}
-                 {selectedOrder.status === 'processing' && (
-                   <Button type="primary" icon={<TruckIcon className="w-4 h-4"/>} className="bg-orange-600" onClick={() => updateStatusMutation.mutate({ orderId: selectedOrder.id, status: 'shipped' })}>Kirim Barang</Button>
-                 )}
+              <div className="flex justify-end p-4 bg-gray-50 rounded-lg">
+                <div className="text-right">
+                  <span className="text-gray-500 block text-xs">Total Pendapatan Anda dari Invoice ini:</span>
+                  <span className="text-xl font-bold text-red-600">
+                    {formatPrice(orderDetail.item?.reduce((sum, i) => sum + i.subtotal, 0))}
+                  </span>
+                </div>
               </div>
             </div>
           )}

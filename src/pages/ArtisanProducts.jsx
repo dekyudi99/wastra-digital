@@ -1,16 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { Card, Table, Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Upload, message, Row, Col } from 'antd'
-import {
-  PlusIcon,
-  PencilIcon,
-  TrashIcon,
-  ArrowLeftIcon,
-  PhotoIcon
-} from '@heroicons/react/24/outline'
-import { useUser } from '../contexts/UserContext'
+import { Card, Table, Button, Space, Tag, Modal, Form, Input, InputNumber, Select, Upload, message, Row, Col, Spin } from 'antd'
+import { PlusIcon, PencilIcon, TrashIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatPrice } from '../utils/format'
-import { ExclamationCircleOutlined } from '@ant-design/icons'
+import productApi from '../api/ProductApi' 
 
 const { Option } = Select
 const { TextArea } = Input
@@ -18,507 +12,270 @@ const { TextArea } = Input
 const ArtisanProducts = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { id } = useParams() // untuk edit mode
-  const { user } = useUser()
+  const { id } = useParams()
   const [form] = Form.useForm()
-  const [loading, setLoading] = useState(false)
-  
-  // Helper default products (harus dideklarasikan sebelum dipakai di useState)
-  const getDefaultProducts = () => [
-    {
-      key: '1',
-      id: '1',
-      name: 'Kain Endek Sidemen Motif Geometris',
-      category: 'endek',
-      price: 350000,
-      stock: 10,
-      description: 'Kain endek tradisional dengan motif geometris',
-      images: ['/placeholder-endek.jpg'],
-      status: 'active',
-      warningMessage: null,
-      warningStatus: null,
-      flaggedAt: null,
-    },
-    {
-      key: '2',
-      id: '2',
-      name: 'Kain Songket Emas Klasik',
-      category: 'songket',
-      price: 850000,
-      stock: 5,
-      description: 'Kain songket dengan benang emas',
-      images: ['/placeholder-songket.jpg'],
-      status: 'active',
-      warningMessage: null,
-      warningStatus: null,
-      flaggedAt: null,
-    },
-  ]
+  const queryClient = useQueryClient()
+  const [fileList, setFileList] = useState([])
 
-  // Check if we're in add mode (tambah) or edit mode (id exists)
   const isAddMode = location.pathname.includes('/tambah')
   const isEditMode = !!id
-  const showForm = isAddMode || isEditMode
 
-  // Load products dari localStorage (sinkron dengan admin) atau default
-  const [products, setProducts] = useState(() => {
-    const storedProducts = localStorage.getItem('wastra.adminProducts')
-    if (storedProducts) {
-      try {
-        const parsed = JSON.parse(storedProducts)
-        // Filter hanya produk milik pengrajin ini (berdasarkan user.id atau artisan name)
-        // Untuk demo, kita ambil semua produk yang ada warning atau semua produk
-        return parsed.map(p => ({
-          ...p,
-          key: String(p.id),
-        }))
-      } catch (error) {
-        return getDefaultProducts()
-      }
-    }
-    return getDefaultProducts()
+  // 1. Fetch List Produk (Hanya di halaman utama)
+  const { data: productsRes, isLoading: loadingList } = useQuery({
+    queryKey: ['myProducts'],
+    queryFn: () => productApi.myProduct(),
+    enabled: !isAddMode && !isEditMode
   })
 
-  // Sync products dengan localStorage
+  // 2. Fetch Detail Produk (Hanya saat mode EDIT)
+  const { data: detailRes, isLoading: loadingDetail } = useQuery({
+    queryKey: ['productDetail', id],
+    queryFn: async () => {
+      const res = await productApi.getById(id)
+      return res.data.data[0] // Mengambil index 0 sesuai struktur data Anda
+    },
+    enabled: isEditMode,
+  })
+
+  // 3. EFFECT: Mengisi Form saat data detail berhasil di-fetch
   useEffect(() => {
-    const storedProducts = localStorage.getItem('wastra.adminProducts')
-    if (storedProducts) {
-      try {
-        const parsed = JSON.parse(storedProducts)
-        setProducts(parsed.map(p => ({
-          ...p,
-          key: String(p.id),
-        })))
-      } catch (error) {
-        console.error('Error loading products:', error)
+    if (isEditMode && detailRes) {
+      form.setFieldsValue(detailRes)
+      
+      // Sinkronisasi Gambar untuk komponen Upload AntD
+      if (detailRes.image_url && Array.isArray(detailRes.image_url)) {
+        const formattedImages = detailRes.image_url.map((url, index) => ({
+          uid: `-${index}`, // uid harus unik dan negatif untuk file lama
+          name: `image-${index}.jpg`,
+          status: 'done',
+          url: url,
+        }))
+        setFileList(formattedImages)
       }
+    } else if (isAddMode) {
+      form.resetFields()
+      setFileList([])
     }
-  }, [])
+  }, [detailRes, isEditMode, isAddMode, form])
+
+  // 4. Mutation: Delete
+  const deleteMutation = useMutation({
+    mutationFn: (productId) => productApi.delete(productId),
+    onSuccess: () => {
+      message.success('Produk berhasil dihapus')
+      queryClient.invalidateQueries(['myProducts'])
+    },
+    onError: (err) => message.error(err.response?.data?.message || 'Gagal menghapus produk')
+  })
+
+  // 5. Mutation: Submit (Store / Update)
+  const submitMutation = useMutation({
+    mutationFn: (formData) => isEditMode ? productApi.update(id, formData) : productApi.store(formData),
+    onSuccess: () => {
+      message.success(isEditMode ? 'Produk berhasil diperbarui' : 'Produk berhasil ditambahkan')
+      queryClient.invalidateQueries(['myProducts'])
+      navigate('/pengrajin/produk')
+    },
+    onError: (err) => message.error(err.response?.data?.message || 'Gagal menyimpan data')
+  })
+
+  const handleSubmit = (values) => {
+    const formData = new FormData()
+    
+    // Append fields teks ke FormData
+    Object.keys(values).forEach(key => {
+      if (key !== 'image' && values[key] !== null && values[key] !== undefined) {
+        formData.append(key, values[key])
+      }
+    })
+    
+    // Append file gambar baru (yang di-upload)
+    fileList.forEach(file => {
+      if (file.originFileObj) {
+        formData.append('image[]', file.originFileObj)
+      }
+    })
+
+    // Laravel Hack: Gunakan spoofing method untuk request multipart di mode Update
+    if (isEditMode) {
+      formData.append('_method', 'PUT')
+    }
+
+    submitMutation.mutate(formData)
+  }
 
   const columns = [
     {
       title: 'Gambar',
-      dataIndex: 'images',
-      key: 'images',
+      dataIndex: 'image_url',
       width: 100,
-      render: (images) => (
-        <div className="w-16 h-16 bg-gray-200 rounded flex items-center justify-center overflow-hidden">
-          {images && images[0] ? (
-            <img src={images[0]} alt="Produk" className="w-full h-full object-cover" />
+      render: (urls) => (
+        <div className="w-16 h-16 border rounded overflow-hidden bg-gray-50 flex items-center justify-center">
+          {urls?.[0] ? (
+             <img src={urls[0]} className="w-full h-full object-cover" alt="prod" />
           ) : (
-            <PhotoIcon className="w-6 h-6 text-gray-400" />
+             <PhotoIcon className="w-6 h-6 text-gray-300" />
           )}
         </div>
-      ),
+      )
     },
-    {
-      title: 'Nama Produk',
-      dataIndex: 'name',
-      key: 'name',
-      render: (text, record) => (
-        <div>
-          <div className="font-medium">{text}</div>
-          {record.warningMessage && record.warningStatus === 'pending' && (
-            <div className="text-xs text-red-600 mt-1 flex items-center gap-1">
-              <ExclamationCircleOutlined className="w-3 h-3" />
-              Ada peringatan dari admin
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: 'Kategori',
-      dataIndex: 'category',
-      key: 'category',
-      render: (category) => (
-        <Tag color={category === 'endek' ? 'blue' : 'gold'}>
-          {category === 'endek' ? 'Endek' : 'Songket'}
-        </Tag>
-      ),
-    },
-    {
-      title: 'Harga',
-      dataIndex: 'price',
-      key: 'price',
-      render: (price) => formatPrice(price),
-    },
-    {
-      title: 'Stok',
-      dataIndex: 'stock',
-      key: 'stock',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status, record) => (
-        <div>
-          <Tag color={status === 'active' ? 'green' : 'red'}>
-            {status === 'active' ? 'Aktif' : 'Nonaktif'}
-          </Tag>
-          {record.warningMessage && (
-            <div className="mt-1">
-              {record.warningStatus === 'pending' && (
-                <Tag color="orange">Ada Peringatan</Tag>
-              )}
-              {record.warningStatus === 'acknowledged' && (
-                <Tag color="blue">Dikonfirmasi</Tag>
-              )}
-              {record.warningStatus === 'updated' && (
-                <Tag color="green">Sudah Diperbarui</Tag>
-              )}
-            </div>
-          )}
-        </div>
-      ),
-    },
+    { title: 'Nama Produk', dataIndex: 'name', key: 'name', render: (t) => <span className="font-medium">{t}</span> },
+    { title: 'Kategori', dataIndex: 'category', render: (c) => <Tag color="gold">{c}</Tag> },
+    { title: 'Harga', dataIndex: 'price', render: (p) => formatPrice(p) },
+    { title: 'Stok', dataIndex: 'stock', align: 'center' },
     {
       title: 'Aksi',
-      key: 'action',
-      width: 200,
+      width: 150,
       render: (_, record) => (
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-          <Space size="small">
-            <Button
-              type="link"
-              size="small"
-              icon={<PencilIcon className="w-4 h-4" />}
-              onClick={() => handleEdit(record)}
-            >
-              Edit
-            </Button>
-            <Button
-              type="link"
-              danger
-              size="small"
-              icon={<TrashIcon className="w-4 h-4" />}
-              onClick={() => handleDelete(record.id)}
-            >
-              Hapus
-            </Button>
-          </Space>
-          {record.warningMessage && record.warningStatus === 'pending' && (
-            <Button
-              type="primary"
-              size="small"
-              onClick={() => handleConfirmUpdated(record.id)}
-              className="bg-green-600 hover:bg-green-700 w-full"
-            >
-              Sudah Diperbarui
-            </Button>
-          )}
+        <Space>
+          <Button type="link" icon={<PencilIcon className="w-4 h-4" />} onClick={() => navigate(`/pengrajin/produk/${record.id}`)}>Edit</Button>
+          <Button type="link" danger icon={<TrashIcon className="w-4 h-4" />} onClick={() => handleDelete(record.id)}>Hapus</Button>
         </Space>
-      ),
-    },
+      )
+    }
   ]
-
-  const handleEdit = (product) => {
-    navigate(`/pengrajin/produk/${product.id}`)
-  }
 
   const handleDelete = (productId) => {
     Modal.confirm({
-      title: 'Hapus Produk',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Apakah Anda yakin ingin menghapus produk ini?',
+      title: 'Hapus Produk?',
+      content: 'Apakah Anda yakin? Data yang dihapus tidak dapat dikembalikan.',
       okText: 'Hapus',
       okType: 'danger',
-      cancelText: 'Batal',
-      onOk: () => {
-        const updatedProducts = products.filter(p => p.id !== productId)
-        setProducts(updatedProducts)
-        // Update localStorage juga
-        const storedProducts = localStorage.getItem('wastra.adminProducts')
-        if (storedProducts) {
-          try {
-            const parsed = JSON.parse(storedProducts)
-            const updated = parsed.filter(p => p.id !== productId)
-            localStorage.setItem('wastra.adminProducts', JSON.stringify(updated))
-          } catch (error) {
-            console.error('Error updating localStorage:', error)
-          }
-        }
-        message.success('Produk berhasil dihapus')
-      },
+      onOk: () => deleteMutation.mutate(productId)
     })
   }
 
-  const handleConfirmUpdated = (productId) => {
-    Modal.confirm({
-      title: 'Konfirmasi Pembaruan',
-      icon: <ExclamationCircleOutlined />,
-      content: 'Apakah Anda sudah memperbarui produk sesuai dengan peringatan dari admin?',
-      okText: 'Ya, Sudah Diperbarui',
-      cancelText: 'Batal',
-      onOk: () => {
-        const updatedProducts = products.map(p => 
-          p.id === productId 
-            ? { ...p, warningStatus: 'updated', updatedAt: new Date().toISOString() }
-            : p
-        )
-        setProducts(updatedProducts)
-        // Update localStorage juga
-        const storedProducts = localStorage.getItem('wastra.adminProducts')
-        if (storedProducts) {
-          try {
-            const parsed = JSON.parse(storedProducts)
-            const updated = parsed.map(p => 
-              p.id === productId 
-                ? { ...p, warningStatus: 'updated', updatedAt: new Date().toISOString() }
-                : p
-            )
-            localStorage.setItem('wastra.adminProducts', JSON.stringify(updated))
-          } catch (error) {
-            console.error('Error updating localStorage:', error)
-          }
-        }
-        message.success('Terima kasih! Produk telah dikonfirmasi sudah diperbarui.')
-      },
-    })
-  }
-
-  const handleSubmit = async (values) => {
-    setLoading(true)
-    try {
-      // Simulasi save - akan call API nanti
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      if (isEditMode && id) {
-        // Update existing
-        setProducts(prevProducts => prevProducts.map(p => p.id === id ? { ...p, ...values } : p))
-        message.success('Produk berhasil diperbarui')
-      } else {
-        // Add new
-        const newProduct = {
-          key: String(Date.now()),
-          id: String(Date.now()),
-          ...values,
-          images: values.images || [],
-          status: 'active',
-        }
-        setProducts(prevProducts => [...prevProducts, newProduct])
-        message.success('Produk berhasil ditambahkan')
-      }
-
-      form.resetFields()
-      navigate('/pengrajin/produk')
-    } catch (error) {
-      message.error('Gagal menyimpan produk')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Load product data if editing
-  useEffect(() => {
-    if (isEditMode && id) {
-      const product = products.find(p => p.id === id)
-      if (product) {
-        // Use setTimeout to ensure form is ready
-        setTimeout(() => {
-          form.setFieldsValue({
-            name: product.name,
-            category: product.category,
-            description: product.description,
-            price: product.price,
-            stock: product.stock,
-            images: product.images || [],
-            status: product.status,
-          })
-        }, 100)
-      }
-    } else if (isAddMode) {
-      form.resetFields()
-      form.setFieldsValue({
-        category: 'endek',
-        status: 'active',
-      })
-    }
-  }, [id, isEditMode, isAddMode, products, form])
+  if (loadingDetail) return (
+    <div className="h-screen flex flex-col justify-center items-center bg-white">
+      <Spin size="large" />
+      <p className="mt-4 text-gray-500">Memuat data produk...</p>
+    </div>
+  )
 
   return (
-    <div className="bg-wastra-brown-50 min-h-[calc(100vh-80px)] overflow-x-hidden w-full">
-      <div className="w-full px-3 sm:px-4 md:px-6 max-w-7xl mx-auto py-6 sm:py-8">
-        {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+    <div className="bg-wastra-brown-50 min-h-screen p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
             {(isAddMode || isEditMode) && (
-              <Button
-                icon={<ArrowLeftIcon className="w-4 h-4" />}
+              <Button 
+                type="text" 
+                icon={<ArrowLeftIcon className="w-4 h-4" />} 
                 onClick={() => navigate('/pengrajin/produk')}
-                className="mb-2"
+                className="mb-2 p-0 flex items-center gap-1 text-gray-500 hover:text-wastra-brown-600"
               >
                 Kembali
               </Button>
             )}
-            <h1 className="text-3xl font-semibold text-wastra-brown-800">
+            <h1 className="text-3xl font-bold text-wastra-brown-800">
               {isEditMode ? 'Edit Produk' : isAddMode ? 'Tambah Produk' : 'Kelola Produk'}
             </h1>
-            <p className="text-wastra-brown-600 mt-2">
-              {isEditMode ? 'Edit informasi produk Anda' : isAddMode ? 'Tambah produk baru' : 'Kelola produk yang Anda jual'}
-            </p>
           </div>
           {!isAddMode && !isEditMode && (
-            <Button
-              type="primary"
-              icon={<PlusIcon className="w-5 h-5" />}
+            <Button 
+              type="primary" 
+              icon={<PlusIcon className="w-5 h-5" />} 
+              className="bg-wastra-brown-600 border-none h-10 flex items-center" 
               onClick={() => navigate('/pengrajin/produk/tambah')}
-              className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
             >
               Tambah Produk
             </Button>
           )}
         </div>
 
-        {/* Warning Banner */}
-        {!isAddMode && !isEditMode && products.some(p => p.warningMessage && p.warningStatus === 'pending') && (
-          <Card className="border border-orange-300 bg-orange-50 mb-6">
-            <div className="flex items-start gap-3">
-              <ExclamationCircleOutlined className="text-orange-600 text-xl mt-1 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-semibold text-orange-800 mb-2">
-                  ⚠️ Ada Produk dengan Peringatan dari Admin
-                </h3>
-                <div className="text-sm text-orange-700 space-y-2">
-                  {products.filter(p => p.warningMessage && p.warningStatus === 'pending').map(product => (
-                    <div key={product.id} className="p-3 bg-white rounded-lg border border-orange-200">
-                      <div className="font-medium text-orange-900 mb-1">{product.name}</div>
-                      <div className="text-orange-700 mb-2">{product.warningMessage}</div>
-                      <div className="text-xs text-orange-600">
-                        Silakan perbarui produk Anda dan klik tombol "Sudah Diperbarui" setelah selesai.
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Products Table */}
-        {!isAddMode && !isEditMode && (
-          <Card className="border border-wastra-brown-100 rounded-xl">
-            <Table
-              columns={columns}
-              dataSource={products}
-              rowKey="id"
-              pagination={{ pageSize: 10 }}
-              locale={{
-                emptyText: 'Belum ada produk. Tambah produk pertama Anda!',
-              }}
+        {(!isAddMode && !isEditMode) ? (
+          <Card borderless className="shadow-sm rounded-xl overflow-hidden">
+            <Table 
+              columns={columns} 
+              dataSource={productsRes?.data?.data || []} 
+              rowKey="id" 
+              loading={loadingList}
+              pagination={{ pageSize: 8 }}
             />
           </Card>
-        )}
-
-        {/* Add/Edit Form */}
-        {(isAddMode || isEditMode) && (
-          <Card className="border border-wastra-brown-100 rounded-xl">
-            <Form
-              form={form}
-              layout="vertical"
-              onFinish={handleSubmit}
-              initialValues={{
-                category: 'endek',
-                status: 'active',
-              }}
-            >
-              <Form.Item
-                name="name"
-                label="Nama Produk"
-                rules={[{ required: true, message: 'Masukkan nama produk' }]}
-              >
-                <Input placeholder="Contoh: Kain Endek Sidemen Motif Geometris" />
-              </Form.Item>
-
-              <Form.Item
-                name="category"
-                label="Kategori"
-                rules={[{ required: true, message: 'Pilih kategori' }]}
-              >
-                <Select placeholder="Pilih kategori">
-                  <Option value="endek">Endek</Option>
-                  <Option value="songket">Songket</Option>
-                </Select>
-              </Form.Item>
-
-              <Form.Item
-                name="description"
-                label="Deskripsi"
-                rules={[{ required: true, message: 'Masukkan deskripsi produk' }]}
-              >
-                <TextArea
-                  rows={4}
-                  placeholder="Jelaskan produk Anda secara detail..."
-                />
-              </Form.Item>
-
-              <Row gutter={16}>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="price"
-                    label="Harga (Rp)"
-                    rules={[{ required: true, message: 'Masukkan harga' }]}
-                  >
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      placeholder="350000"
-                      min={0}
-                      formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
-                    />
+        ) : (
+          <Card borderless className="shadow-sm rounded-xl">
+            <Form form={form} layout="vertical" onFinish={handleSubmit} requiredMark={false}>
+              <Row gutter={24}>
+                <Col xs={24} lg={16}>
+                  <Form.Item name="name" label="Nama Produk" rules={[{ required: true, message: 'Nama wajib diisi' }]}>
+                    <Input placeholder="Masukkan nama produk..." />
+                  </Form.Item>
+                  <Form.Item name="description" label="Deskripsi" rules={[{ required: true, message: 'Deskripsi wajib diisi' }]}>
+                    <TextArea rows={6} placeholder="Jelaskan detail produk, motif, dan sejarahnya..." />
                   </Form.Item>
                 </Col>
-                <Col xs={24} sm={12}>
-                  <Form.Item
-                    name="stock"
-                    label="Stok"
-                    rules={[{ required: true, message: 'Masukkan stok' }]}
-                  >
-                    <InputNumber
-                      style={{ width: '100%' }}
-                      placeholder="10"
-                      min={0}
-                    />
+                <Col xs={24} lg={8}>
+                  <Form.Item name="category" label="Kategori" rules={[{ required: true, message: 'Pilih kategori' }]}>
+                    <Select placeholder="Pilih kategori">
+                      <Option value="Endek">Endek</Option>
+                      <Option value="Songket">Songket</Option>
+                    </Select>
                   </Form.Item>
+                  <Form.Item name="material" label="Material" rules={[{ required: true, message: 'Material wajib diisi' }]}>
+                    <Input placeholder="Contoh: Sutra, Katun..." />
+                  </Form.Item>
+                  <Row gutter={12}>
+                    <Col span={12}>
+                      <Form.Item name="price" label="Harga (Rp)" rules={[{ required: true, message: 'Harga wajib diisi' }]}>
+                        <InputNumber 
+                          className="w-full" 
+                          formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="stock" label="Stok" rules={[{ required: true, message: 'Stok wajib diisi' }]}>
+                        <InputNumber className="w-full" min={0} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Row gutter={12}>
+                    <Col span={12}>
+                      <Form.Item name="wide" label="Lebar (cm)" rules={[{ required: true, message: 'Isi lebar' }]}>
+                        <InputNumber className="w-full" min={0} />
+                      </Form.Item>
+                    </Col>
+                    <Col span={12}>
+                      <Form.Item name="long" label="Panjang (cm)" rules={[{ required: true, message: 'Isi panjang' }]}>
+                        <InputNumber className="w-full" min={0} />
+                      </Form.Item>
+                    </Col>
+                  </Row>
                 </Col>
               </Row>
 
-              <Form.Item
-                name="images"
-                label="Gambar Produk"
-                extra="Upload gambar produk (maks 5MB per gambar)"
-              >
+              <Form.Item label="Gambar Produk (Maksimal 5)">
                 <Upload
                   listType="picture-card"
-                  maxCount={5}
-                  beforeUpload={() => false} // Prevent auto upload
+                  fileList={fileList}
+                  onPreview={() => {}} // Anda bisa menambahkan Modal preview jika butuh
+                  onChange={({ fileList }) => setFileList(fileList)}
+                  beforeUpload={() => false} // Menunda upload otomatis ke server
                 >
-                  <div>
-                    <PhotoIcon className="w-6 h-6" />
-                    <div className="mt-2">Upload</div>
-                  </div>
+                  {fileList.length < 5 && (
+                    <div className="flex flex-col items-center">
+                      <PhotoIcon className="w-6 h-6 text-gray-400" />
+                      <div className="mt-1 text-xs text-gray-500">Upload</div>
+                    </div>
+                  )}
                 </Upload>
               </Form.Item>
 
-              <Form.Item>
-                <Space>
-                  <Button
-                    type="primary"
-                    htmlType="submit"
-                    loading={loading}
-                    className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-                  >
-                    {isEditMode ? 'Perbarui Produk' : 'Tambah Produk'}
-                  </Button>
-                  <Button onClick={() => {
-                    form.resetFields()
-                    navigate('/pengrajin/produk')
-                  }}>
-                    Batal
-                  </Button>
-                </Space>
-              </Form.Item>
+              <div className="border-t pt-6 flex justify-end gap-3">
+                <Button onClick={() => navigate('/pengrajin/produk')} disabled={submitMutation.isLoading}>
+                  Batal
+                </Button>
+                <Button 
+                  type="primary" 
+                  htmlType="submit" 
+                  loading={submitMutation.isLoading} 
+                  className="bg-wastra-brown-600 border-none px-8"
+                >
+                  {isEditMode ? 'Perbarui Produk' : 'Simpan Produk'}
+                </Button>
+              </div>
             </Form>
           </Card>
         )}
@@ -528,4 +285,3 @@ const ArtisanProducts = () => {
 }
 
 export default ArtisanProducts
-
