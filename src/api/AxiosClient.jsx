@@ -26,11 +26,11 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
-            // localStorage.removeItem('wastra.user')
-            // localStorage.removeItem('wastra.role')
+        if (error.response.status === 401) {
+            localStorage.removeItem('AUTH_TOKEN')
+            localStorage.removeItem('ROLE')
             
-            // window.location.href = '/masuk'
+            window.location.href = '/masuk'
         }
 
         
