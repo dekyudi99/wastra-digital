@@ -26,12 +26,11 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response.status === 401) {
+        if (error.response || error.response.status === 401) {
             localStorage.removeItem('AUTH_TOKEN')
             localStorage.removeItem('ROLE')
         }
 
-        
         return Promise.reject(error)
     }
 )
