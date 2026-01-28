@@ -91,8 +91,8 @@ const Header = () => {
   const isAuthenticated = !!token;
 
   return (
-    <header className="bg-white sticky top-0 z-50 border-b border-wastra-brown-100">
-      <div className="container mx-auto px-4 pr-14">
+    <header className="bg-white sticky top-0 z-50 border-b border-wastra-brown-100 w-full">
+      <div className="">
         <div className="flex items-center justify-between h-20 gap-6">
           <Link to="/" className="flex-shrink-0 flex flex-row items-center gap-1 no-underline">
             <img src={IconWeb} alt="" className='h-12'/>
@@ -296,13 +296,7 @@ const Header = () => {
                     <Menu>
                       <Menu.Item 
                         key="profile"
-                        onClick={() => {
-                          if (user.role == "artisan") {
-                            navigate('/pengrajin/profil')
-                          } else {
-                            navigate('/profil')
-                          }
-                        }}
+                        onClick={() => {navigate('/profil')}}
                       >
                         <div className="flex items-center gap-2">
                           <UserIcon className="w-4 h-4" />

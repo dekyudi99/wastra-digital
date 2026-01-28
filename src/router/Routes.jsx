@@ -77,7 +77,6 @@ const routes = createBrowserRouter([
       // ================= ADMIN ROUTES =================
       {
         path: "admin",
-        element: <ProtectedRoute requireRole={USER_ROLES.ADMIN} />,
         loader: roleGuard('admin'),
         children: [
           { index: true, element: <AdminDashboard /> },

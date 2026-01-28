@@ -3,7 +3,7 @@ import Footer from './Footer'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
-const Layout = ({ children }) => {
+const Layout = () => {
   const location = useLocation()
   const [isTransitioning, setIsTransitioning] = useState(false)
 
@@ -27,7 +27,7 @@ const Layout = ({ children }) => {
   }, [location.pathname])
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="min-h-screen flex flex-col min-w-screen md:w-full overflow-x-hidden">
       <Header />
 
       {/* MAIN dengan transisi */}

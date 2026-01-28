@@ -34,6 +34,9 @@ const orderApi = {
     updateStatus: (id, status) => {
         return axiosClient.put(`order/update-status/${id}`, { status });
     },
+    adminDashboardStats: () => {
+        return axiosClient.get('admin/dashboard-stats');
+    }
 }
 
 export default orderApi

@@ -17,6 +17,9 @@ const userApi = {
     },
     changePassword: (request) => {
         return axiosClient.put('user/change-password', request)
+    },
+    getArtisan: (id) => {
+        return axiosClient.get(`artisan/shop/${id}`)
     }
 }
 

@@ -23,7 +23,7 @@ const productApi = {
     },
     update: (id, request) => {
         return axiosClient.post(
-            `product/update/${id}`,
+            `update/product/${id}`,
             request,
             {
                 headers: {

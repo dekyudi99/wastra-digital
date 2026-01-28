@@ -98,7 +98,7 @@ const ArtisanProducts = () => {
 
     // Laravel Hack: Gunakan spoofing method untuk request multipart di mode Update
     if (isEditMode) {
-      formData.append('_method', 'PUT')
+      formData.append('_method', 'POST')
     }
 
     submitMutation.mutate(formData)

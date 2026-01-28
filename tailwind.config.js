@@ -51,7 +51,7 @@ export default {
   },
   plugins: [],
   corePlugins: {
-    preflight: false, // Disable Tailwind's base styles to avoid conflicts with Ant Design
+    preflight: true, // Disable Tailwind's base styles to avoid conflicts with Ant Design
   },
 }
 

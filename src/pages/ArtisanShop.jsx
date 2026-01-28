@@ -1,49 +1,91 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { Card, Row, Col, Tag, Avatar, Rate, Button, Descriptions, Divider, Modal, message } from 'antd'
+import { Card, Row, Col, Tag, Avatar, Rate, Button, Modal, message, Spin } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   ShoppingCartIcon,
   UserIcon,
   ChatBubbleLeftRightIcon,
   MapPinIcon,
-  StarIcon,
   ShoppingBagIcon
 } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
-import { mockProducts } from '../utils/mockProducts'
-import { useUser } from '../contexts/UserContext'
-import { useCart } from '../contexts/CartContext'
-import { USER_ROLES } from '../utils/authRoles'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import userApi from '../api/UserApi'
+import orderApi from '../api/OrderApi'
 
 const ArtisanShop = () => {
+  const token = localStorage.getItem("AUTH_TOKEN")
+  const isAuthenticated = !!token
   const { id } = useParams()
   const navigate = useNavigate()
-  const { isAuthenticated, hasRole } = useUser()
-  const { cartItems, setCartItems } = useCart()
+  const queryClient = useQueryClient()
   
-  const isArtisan = hasRole(USER_ROLES.ARTISAN)
-  const artisanId = parseInt(id, 10)
+  const isArtisan = localStorage.getItem("ROLE") == "artisan"
 
-  // Get artisan info from products
-  const artisanProducts = mockProducts.filter(p => p.artisan.id === artisanId)
-  const artisan = artisanProducts.length > 0 ? artisanProducts[0].artisan : null
+  // 1. FETCH DATA TOKO & PRODUK DARI API
+  const { data: response, isLoading, isError } = useQuery({
+    queryKey: ['artisanShop', id],
+    queryFn: () => userApi.getArtisan(id),
+    enabled: !!id
+  })
 
-  if (!artisan || artisanProducts.length === 0) {
+  const artisan = response?.data?.data
+  const artisanProducts = artisan?.product || []
+
+  // 2. MUTASI UNTUK MENAMBAH KE KERANJANG (API BASED)
+  const addToCartMutation = useMutation({
+    mutationFn: ({ productId, quantity }) => orderApi.addCart(productId, quantity),
+    onSuccess: (res) => {
+      message.success(res.data.message || 'Berhasil ditambah ke keranjang')
+      // Memperbarui badge keranjang secara global jika ada
+      queryClient.invalidateQueries(['cartData']) 
+    },
+    onError: (err) => {
+      const errorMsg = err.response?.data?.message || 'Gagal menambah ke keranjang'
+      message.error(errorMsg)
+    }
+  })
+
+  const handleAddToCart = (product) => {
+    // Proteksi: Pengrajin tidak boleh beli barang sendiri/orang lain
+    if (isArtisan) {
+      Modal.warning({
+        title: 'Akses Dibatasi',
+        icon: <ExclamationCircleOutlined />,
+        content: 'Akun Pengrajin tidak dapat melakukan pembelian. Silakan gunakan akun pembeli.',
+      })
+      return
+    }
+    
+    // Proteksi: Harus login
+    if (!isAuthenticated) {
+      Modal.confirm({
+        title: 'Login Diperlukan',
+        content: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
+        okText: 'Login',
+        onOk: () => navigate(`/onboarding?redirect=${encodeURIComponent(`/artisan/${id}`)}`),
+      })
+      return
+    }
+    
+    // Eksekusi API addCart
+    addToCartMutation.mutate({ productId: product.id, quantity: 1 })
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center bg-wastra-brown-50">
+        <Spin size="large" tip="Memuat Toko..." />
+      </div>
+    )
+  }
+
+  if (isError || !artisan) {
     return (
       <div className="min-h-screen bg-wastra-brown-50 py-8">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-2xl font-semibold text-wastra-brown-800 mb-4">
-            Toko tidak ditemukan
-          </h1>
-          <p className="text-wastra-brown-600 mb-6">
-            Toko yang Anda cari tidak tersedia atau telah dihapus.
-          </p>
-          <Button
-            type="primary"
-            onClick={() => navigate('/produk')}
-            className="bg-wastra-brown-600 hover:bg-wastra-brown-700"
-          >
+        <div className="max-w-3xl mx-auto px-4 text-center">
+          <h1 className="text-2xl font-semibold text-wastra-brown-800 mb-4">Toko tidak ditemukan</h1>
+          <Button type="primary" onClick={() => navigate('/produk')} className="bg-wastra-brown-600">
             Kembali ke Katalog
           </Button>
         </div>
@@ -51,272 +93,133 @@ const ArtisanShop = () => {
     )
   }
 
-  // Calculate shop statistics
+  // Kalkulasi statistik dari data produk API
   const totalProducts = artisanProducts.length
-  const averageRating = artisanProducts.reduce((sum, p) => sum + p.rating, 0) / totalProducts
-  const totalReviews = artisanProducts.reduce((sum, p) => sum + p.totalReviews, 0)
-  const priceRange = {
-    min: Math.min(...artisanProducts.map(p => p.price)),
-    max: Math.max(...artisanProducts.map(p => p.price)),
-  }
-
-  // Mock shop description
-  const shopDescription = `Selamat datang di toko ${artisan.name}! Kami adalah pengrajin tradisional yang telah berpengalaman puluhan tahun dalam membuat kain Endek dan Songket berkualitas tinggi dari Desa Sidemen, Karangasem, Bali. Setiap produk kami dibuat dengan teliti menggunakan teknik tenun tradisional yang diwariskan turun-temurun, memastikan kualitas dan keaslian motif yang autentik.`
-
-  const handleAddToCart = (product) => {
-    if (isArtisan) {
-      Modal.warning({
-        title: 'Akses Dibatasi',
-        icon: <ExclamationCircleOutlined />,
-        content: 'Pengrajin tidak dapat menambahkan produk ke keranjang. Silakan gunakan akun pembeli untuk melakukan pembelian.',
-      })
-      return
-    }
-    
-    if (!isAuthenticated) {
-      Modal.confirm({
-        title: 'Login Diperlukan',
-        icon: <ExclamationCircleOutlined />,
-        content: 'Silakan login terlebih dahulu untuk menambahkan produk ke keranjang.',
-        okText: 'Login',
-        cancelText: 'Batal',
-        okType: 'primary',
-        onOk: () => {
-          navigate(`/onboarding?redirect=${encodeURIComponent(`/artisan/${id}`)}`)
-        },
-      })
-      return
-    }
-    
-    const existingItem = cartItems.find(item => item.id === product.id)
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ))
-    } else {
-      setCartItems([
-        ...cartItems,
-        {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-          image: product.images?.[0] || product.image,
-          thumbnail: product.images?.[0] || product.image,
-          selected: false,
-          seller: product.artisan.name,
-        },
-      ])
-    }
-    message.success('Produk ditambahkan ke keranjang')
-  }
+  const averageRating = totalProducts > 0 
+    ? artisanProducts.reduce((sum, p) => sum + (p.rating || 0), 0) / totalProducts 
+    : 0
+  const totalReviews = artisanProducts.reduce((sum, p) => sum + (p.review_count || 0), 0)
 
   return (
-    <div className="min-h-screen bg-wastra-brown-50 py-4 sm:py-6 md:py-8 overflow-x-hidden">
-      <div className="w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        {/* Back Button */}
-        <Link to="/produk">
-          <Button 
-            type="text" 
-            icon={<UserIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
-            className="mb-4 sm:mb-6 text-wastra-brown-600 hover:text-wastra-brown-800 text-sm sm:text-base"
-          >
-            Kembali ke Katalog
-          </Button>
-        </Link>
-
-        {/* Shop Header */}
-        <Card className="border border-wastra-brown-200 rounded-xl shadow-sm mb-6">
-          <div className="flex flex-col md:flex-row gap-6">
-            {/* Shop Avatar */}
-            <div className="flex-shrink-0">
-              <Avatar 
-                size={120} 
-                icon={<UserIcon className="w-16 h-16" />}
-                className="bg-wastra-brown-200 text-wastra-brown-600 border-4 border-white shadow-lg"
-              />
-            </div>
-
-            {/* Shop Info */}
-            <div className="flex-1">
-              <div className="mb-4">
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-wastra-brown-800 mb-2">
-                  {artisan.name}
-                </h1>
-                <div className="flex flex-wrap items-center gap-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Rate disabled defaultValue={averageRating} allowHalf className="text-sm sm:text-base" />
-                    <span className="text-wastra-brown-600 text-sm sm:text-base font-medium">
-                      {averageRating.toFixed(1)}
-                    </span>
-                    <span className="text-wastra-brown-500 text-xs sm:text-sm">
-                      ({totalReviews} ulasan)
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm sm:text-base text-wastra-brown-600">
-                  <div className="flex items-center gap-2">
-                    <ShoppingBagIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span>{totalProducts} Produk</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPinIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span>Desa Sidemen, Karangasem, Bali</span>
-                  </div>
-                </div>
+    <div className="min-h-screen bg-wastra-brown-50 py-6 overflow-x-hidden font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header Toko */}
+        <Card className="rounded-2xl shadow-sm mb-6 border-none overflow-hidden">
+          <div className="flex flex-col md:flex-row gap-8 items-center md:items-start p-2">
+            <Avatar 
+              size={130} 
+              src={artisan.profile_picture}
+              icon={<UserIcon className="w-16 h-16" />}
+              className="bg-wastra-brown-100 border-4 border-white shadow-md flex-shrink-0"
+            />
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-3xl font-extrabold text-wastra-brown-900 mb-2">{artisan.name}</h1>
+              <div className="flex flex-wrap justify-center md:justify-start items-center gap-3 mb-4">
+                <Rate disabled defaultValue={averageRating} allowHalf className="text-sm" />
+                <span className="text-wastra-brown-700 font-bold">{averageRating.toFixed(1)}</span>
+                <span className="text-wastra-brown-400 text-xs">({totalReviews} ulasan)</span>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="primary"
-                  icon={<ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />}
-                  onClick={() => {
-                    if (!isAuthenticated) {
-                      Modal.confirm({
-                        title: 'Login Diperlukan',
-                        icon: <ExclamationCircleOutlined />,
-                        content: 'Silakan login terlebih dahulu untuk chat dengan penjual.',
-                        okText: 'Login',
-                        cancelText: 'Batal',
-                        okType: 'primary',
-                        onOk: () => {
-                          navigate(`/onboarding?redirect=${encodeURIComponent(`/artisan/${id}`)}`)
-                        },
-                      })
-                      return
-                    }
-                    navigate(`/chat/${id}`)
-                  }}
-                  className="bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none h-10 sm:h-11"
-                >
-                  Chat Penjual
-                </Button>
+              <div className="flex flex-wrap justify-center md:justify-start gap-5 text-wastra-brown-600 mb-6">
+                <div className="flex items-center gap-2"><ShoppingBagIcon className="w-5 h-5 text-amber-600"/> {totalProducts} Produk</div>
+                <div className="flex items-center gap-2"><MapPinIcon className="w-5 h-5 text-red-500"/> Bali, Indonesia</div>
               </div>
+              <Button
+                type="primary"
+                size="large"
+                icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
+                onClick={() => navigate(`/chat/${id}`)}
+                className="bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none px-10 rounded-full shadow-lg h-12"
+              >
+                Chat Penjual
+              </Button>
             </div>
           </div>
         </Card>
 
-        {/* Shop Description */}
-        <Card className="border border-wastra-brown-200 rounded-xl shadow-sm mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-wastra-brown-800 mb-4">
-            Tentang Toko
-          </h2>
-          <p className="text-wastra-brown-700 leading-relaxed text-sm sm:text-base">
-            {shopDescription}
-          </p>
-        </Card>
+        {/* Info & Statistik */}
+        <Row gutter={[20, 20]} className="mb-8">
+          <Col xs={24} md={16}>
+            <Card title={<span className="text-lg font-bold">Tentang Toko</span>} className="rounded-xl border-none shadow-sm h-full">
+              <p className="text-wastra-brown-700 leading-relaxed text-base">
+                Selamat datang di toko resmi **{artisan.name}**. Kami berkomitmen menyediakan kain tradisional Bali 
+                terbaik langsung dari pengrajin lokal. Temukan koleksi eksklusif kami mulai dari Endek Sidemen hingga Songket premium.
+              </p>
+            </Card>
+          </Col>
+          <Col xs={24} md={8}>
+            <Card title={<span className="text-lg font-bold">Statistik Performa</span>} className="rounded-xl border-none shadow-sm h-full">
+              <div className="space-y-5">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Total Koleksi</span>
+                  <Tag color="blue" className="font-bold rounded-full">{totalProducts} Item</Tag>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Kepuasan Pelanggan</span>
+                  <span className="font-bold text-wastra-brown-800">{averageRating.toFixed(1)} / 5.0</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500">Total Ulasan</span>
+                  <span className="font-bold text-wastra-brown-800">{totalReviews} Feedback</span>
+                </div>
+              </div>
+            </Card>
+          </Col>
+        </Row>
 
-        {/* Shop Statistics */}
-        <Card className="border border-wastra-brown-200 rounded-xl shadow-sm mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-wastra-brown-800 mb-4">
-            Statistik Toko
-          </h2>
-          <Row gutter={[16, 16]}>
-            <Col xs={12} sm={6}>
-              <div className="text-center p-4 bg-wastra-brown-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-wastra-brown-800 mb-1">
-                  {totalProducts}
-                </div>
-                <div className="text-sm sm:text-base text-wastra-brown-600">
-                  Total Produk
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div className="text-center p-4 bg-wastra-brown-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-wastra-brown-800 mb-1">
-                  {averageRating.toFixed(1)}
-                </div>
-                <div className="text-sm sm:text-base text-wastra-brown-600">
-                  Rating Rata-rata
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div className="text-center p-4 bg-wastra-brown-50 rounded-lg">
-                <div className="text-2xl sm:text-3xl font-bold text-wastra-brown-800 mb-1">
-                  {totalReviews}
-                </div>
-                <div className="text-sm sm:text-base text-wastra-brown-600">
-                  Total Ulasan
-                </div>
-              </div>
-            </Col>
-            <Col xs={12} sm={6}>
-              <div className="text-center p-4 bg-wastra-brown-50 rounded-lg">
-                <div className="text-sm sm:text-base font-bold text-wastra-brown-800 mb-1">
-                  {formatPrice(priceRange.min)}
-                </div>
-                <div className="text-xs sm:text-sm text-wastra-brown-600">
-                  Harga Terendah
-                </div>
-              </div>
-            </Col>
-          </Row>
-        </Card>
+        {/* Daftar Produk */}
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-2 h-8 bg-amber-600 rounded-full" />
+          <h2 className="text-2xl font-black text-wastra-brown-900 m-0">Katalog Produk Unggulan</h2>
+        </div>
 
-        {/* Products Section */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-wastra-brown-800">
-              Produk ({totalProducts})
-            </h2>
-          </div>
-
-          <Row gutter={[16, 16]}>
-            {artisanProducts.map((product) => (
-              <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
-                <Card
-                  hoverable
-                  className="h-full flex flex-col border border-wastra-brown-200 rounded-xl overflow-hidden"
-                  cover={
-                    <Link to={`/produk/${product.id}`} className="block">
-                      <div className="h-40 sm:h-48 bg-wastra-brown-50 flex items-center justify-center cursor-pointer hover:opacity-90 transition">
-                        <span className="text-wastra-brown-400 text-xs sm:text-sm text-center px-2">
-                          {product.name}
-                        </span>
-                      </div>
-                    </Link>
-                  }
-                  bodyStyle={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '12px' }}
-                >
-                  <Link to={`/produk/${product.id}`} className="flex-1">
-                    <div className="mb-2">
-                      <Tag color={product.category === 'endek' ? 'blue' : 'gold'} className="text-xs">
-                        {product.category === 'endek' ? 'Endek' : 'Songket'}
-                      </Tag>
+        <Row gutter={[20, 20]}>
+          {artisanProducts.map((product) => (
+            <Col xs={12} sm={8} md={6} lg={4} key={product.id}>
+              <Card
+                hoverable
+                className="rounded-2xl overflow-hidden border-none shadow-sm hover:shadow-md transition-all flex flex-col h-full w-full"
+                cover={
+                  <Link to={`/produk/${product.id}`}>
+                    <div className="h-48 sm:h-56 bg-gray-50 flex items-center justify-center relative group">
+                      {product.image_url?.[0] ? (
+                        <img src={product.image_url[0]} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                      ) : (
+                        <ShoppingBagIcon className="w-12 h-12 text-gray-200" />
+                      )}
+                      {product.discount && (
+                        <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-md">
+                          DISKON {product.discount}%
+                        </div>
+                      )}
                     </div>
-                    <h3 className="text-sm sm:text-base font-semibold mb-2 line-clamp-2 hover:text-wastra-brown-600 transition text-wastra-brown-800">
+                  </Link>
+                }
+              >
+                <div className="flex flex-col gap-2 flex-grow w-full">
+                  <Tag color="gold" className="w-fit text-[10px] font-bold uppercase rounded-md">{product.category}</Tag>
+                  <Link to={`/produk/${product.id}`}>
+                    <h3 className="font-bold text-wastra-brown-800 line-clamp-2 hover:text-amber-700 text-sm sm:text-base leading-tight">
                       {product.name}
                     </h3>
-                    <div className="flex items-center gap-1 mb-2">
-                      <Rate disabled defaultValue={product.rating} allowHalf className="text-xs" />
-                      <span className="text-xs text-wastra-brown-500">
-                        ({product.totalReviews})
-                      </span>
-                    </div>
-                    <p className="text-base sm:text-lg font-bold text-red-600 mb-2">
-                      {formatPrice(product.price)}
-                    </p>
                   </Link>
-                  <Button
-                    type="default"
-                    block
-                    icon={<ShoppingCartIcon className="w-4 h-4" />}
-                    className="border-wastra-brown-600 text-wastra-brown-600 hover:bg-wastra-brown-50 mt-auto"
-                    disabled={isArtisan}
-                    onClick={() => handleAddToCart(product)}
-                  >
-                    Tambah ke Keranjang
-                  </Button>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </div>
+                  <div className="mt-auto">
+                    <p className="text-base sm:text-lg font-black text-red-600 mb-3">{formatPrice(product.price)}</p>
+                    <Button
+                      block
+                      type="primary"
+                      icon={<ShoppingCartIcon className="w-4 h-4" />}
+                      loading={addToCartMutation.isLoading && addToCartMutation.variables?.productId === product.id}
+                      onClick={() => handleAddToCart(product)}
+                      className="bg-wastra-brown-800 hover:bg-black border-none rounded-xl h-10 font-bold"
+                    >
+                      Tambah Ke Keranjang
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
       </div>
     </div>
   )
