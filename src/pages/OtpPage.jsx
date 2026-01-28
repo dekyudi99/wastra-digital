@@ -27,14 +27,12 @@ const OtpPage = () => {
 
         message.success('Verifikasi email berhasil')
 
-        const user = JSON.parse(
-            localStorage.getItem('wastra.user')
-        )
+        const role = localStorage.getItem("ROLE")
 
         // Redirect berdasarkan role
-        if (user.role == 'admin') {
+        if (role == 'admin') {
             navigate('/admin', { replace: true })
-        } else if (user.role == 'artisan') {
+        } else if (role == 'artisan') {
             navigate('/pengrajin', { replace: true })
         } else {
             window.location.href = '/';
