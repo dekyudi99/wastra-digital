@@ -111,10 +111,14 @@ const ProductDetail = () => {
           <Card className="border border-wastra-brown-200 rounded-xl shadow-sm">
             {/* Main Image */}
             <div 
-              className="h-48 sm:h-64 md:h-80 bg-wastra-brown-50 flex items-center justify-center rounded-lg mb-3 sm:mb-4 border border-wastra-brown-100 cursor-pointer hover:opacity-90 transition"
+              className="bg-wastra-brown-50 rounded-lg mb-3 sm:mb-4 border border-wastra-brown-100 cursor-pointer hover:opacity-90 transition overflow-hidden aspect-square w-full max-w-sm mx-auto"
               onClick={() => setIsImageModalVisible(true)}
             >
-              <img src={product[0].image_url[selectedImageIndex]} alt="" />
+              <img 
+                src={product[0].image_url[selectedImageIndex]} 
+                alt="" 
+                className="w-full h-full object-cover"
+              />
             </div>
             
             {/* Thumbnail Gallery */}

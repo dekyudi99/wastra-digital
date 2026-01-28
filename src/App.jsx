@@ -3,7 +3,7 @@ import routes from './router/routes'
 
 function App() {
   return (
-    <div classname="w-screen md:w-full">
+    <div className="w-full">
       <RouterProvider router={routes} />
     </div>
   );

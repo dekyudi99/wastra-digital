@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom'
-import { Input, Avatar, Modal, Dropdown, Menu, message, Spin } from 'antd'
+import { Input, Avatar, Modal, Dropdown, Menu, message, Spin, Drawer } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   BellIcon, 
@@ -22,6 +22,7 @@ const Header = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
@@ -92,8 +93,8 @@ const Header = () => {
 
   return (
     <header className="bg-white sticky top-0 z-50 border-b border-wastra-brown-100 w-full">
-      <div className="">
-        <div className="flex items-center justify-between h-20 gap-6">
+      <div className="mx-auto max-w-6xl px-4 md:px-6">
+        <div className="flex items-center justify-between h-20 gap-4">
           <Link to="/" className="flex-shrink-0 flex flex-row items-center gap-1 no-underline">
             <img src={IconWeb} alt="" className='h-12'/>
             <div className="flex flex-col leading-tight">
@@ -128,7 +129,7 @@ const Header = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <nav className="hidden md:flex items-center gap-4 mr-10">
+            <nav className="hidden md:flex items-center gap-4 mr-6">
               <NavLink 
                 to="/" 
                 end // Menggunakan 'end' agar rute '/' tidak aktif saat di sub-rute lain
@@ -229,7 +230,7 @@ const Header = () => {
               )}
             </nav>
 
-            <div className="flex items-center gap-3 flex-shrink pr-8">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink pr-1 sm:pr-0">
 
               {/* ✅ NOTIFIKASI */}
               <button
@@ -352,6 +353,7 @@ const Header = () => {
 
               <button
                 type="button"
+                onClick={() => setIsMobileMenuOpen(true)}
                 className="md:hidden w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
               >
                 <Bars3Icon className="w-6 h-6" />
@@ -360,6 +362,123 @@ const Header = () => {
             </div>
           </div>
         </div>
+
+        {/* Mobile navigation drawer */}
+        <Drawer
+          title="Menu"
+          placement="right"
+          width={260}
+          onClose={() => setIsMobileMenuOpen(false)}
+          open={isMobileMenuOpen}
+        >
+          <nav className="flex flex-col gap-3">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `block py-1 text-sm font-medium ${
+                  isActive
+                    ? 'text-wastra-brown-800'
+                    : 'text-wastra-brown-600'
+                }`
+              }
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Beranda
+            </NavLink>
+
+            <NavLink
+              to="/produk"
+              className={({ isActive }) =>
+                `block py-1 text-sm font-medium ${
+                  isActive
+                    ? 'text-wastra-brown-800'
+                    : 'text-wastra-brown-600'
+                }`
+              }
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              Katalog Produk
+            </NavLink>
+
+            {user?.role === 'artisan' && (
+              <>
+                <NavLink
+                  to="/pengrajin"
+                  end
+                  className={({ isActive }) =>
+                    `block py-1 text-sm font-medium ${
+                      isActive
+                        ? 'text-wastra-brown-800'
+                        : 'text-wastra-brown-600'
+                    }`
+                  }
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Dashboard Pengrajin
+                </NavLink>
+                <NavLink
+                  to="/pengrajin/produk"
+                  className={({ isActive }) =>
+                    `block py-1 text-sm font-medium ${
+                      isActive
+                        ? 'text-wastra-brown-800'
+                        : 'text-wastra-brown-600'
+                    }`
+                  }
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Kelola Produk
+                </NavLink>
+                <NavLink
+                  to="/pengrajin/pesanan"
+                  className={({ isActive }) =>
+                    `block py-1 text-sm font-medium ${
+                      isActive
+                        ? 'text-wastra-brown-800'
+                        : 'text-wastra-brown-600'
+                    }`
+                  }
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Pesanan Masuk
+                </NavLink>
+              </>
+            )}
+
+            {user?.role === 'admin' && (
+              <NavLink
+                to="/admin"
+                className={({ isActive }) =>
+                  `block py-1 text-sm font-medium ${
+                    isActive
+                      ? 'text-wastra-brown-800'
+                      : 'text-wastra-brown-600'
+                  }`
+                }
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Dashboard Admin
+              </NavLink>
+            )}
+
+            {!isAuthenticated && (
+              <NavLink
+                to="/masuk"
+                className={({ isActive }) =>
+                  `block py-1 text-sm font-medium ${
+                    isActive
+                      ? 'text-wastra-brown-800'
+                      : 'text-wastra-brown-600'
+                  }`
+                }
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                Masuk
+              </NavLink>
+            )}
+          </nav>
+        </Drawer>
       </div>
     </header>
   )

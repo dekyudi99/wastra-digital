@@ -213,7 +213,7 @@ const LandingPage = () => {
           </div>
 
           <div className="w-full overflow-hidden">
-            <div className="px-16 sm:px-20 md:px-24 lg:px-28 xl:px-32 2xl:px-40">
+            <div className="px-2 sm:px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-20">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5 md:gap-6 justify-items-center">
                 {
                   isLoading?
@@ -257,13 +257,13 @@ const LandingPage = () => {
                               <Rate disabled defaultValue={product.rating} allowHalf className="text-xs sm:text-sm" />
                             </div>
                           </div>
-                          <div className="mt-auto flex items-center justify-between pt-2">
-                            <p className="text-lg font-semibold text-wastra-brown-800 leading-tight">
+                          <div className="mt-auto flex items-start justify-between gap-2 pt-2">
+                            <p className="flex-1 text-sm sm:text-base font-semibold text-wastra-brown-800 leading-tight">
                               {formatPrice(product.last_price)}
                             </p>
                             <button
                               type="button"
-                              className="w-10 h-10 bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white rounded-full flex items-center justify-center transition-colors"
+                              className="w-9 h-9 sm:w-10 sm:h-10 bg-wastra-brown-600 hover:bg-wastra-brown-700 text-white rounded-full flex items-center justify-center transition-colors flex-shrink-0"
                               aria-label="Tambah ke keranjang"
                             >
                               <ShoppingBagIcon className="w-5 h-5" />
