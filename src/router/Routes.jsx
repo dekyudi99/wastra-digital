@@ -57,7 +57,7 @@ const routes = createBrowserRouter([
       { path: "pesanan", element: <OrderHistory /> },
       { path: "alamat", element: <AddressManagement /> },
       { path: "notifications", element: <Notifications /> },
-      { path: "chat/:sellerId", element: <ChatDetail /> },
+      { path:"/chat/:conversationId", element:<ChatDetail /> },
 
       // ================= ARTISAN ROUTES =================
       {

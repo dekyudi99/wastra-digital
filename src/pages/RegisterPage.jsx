@@ -58,6 +58,7 @@ const RegisterPage = () => {
       // ✅ LOGIN OTOMATIS (INI KUNCI PERUBAHAN)
       localStorage.setItem("AUTH_TOKEN", token)
       localStorage.setItem("ROLE", user.role)
+      localStorage.setItem("USER_ID", user.id)
 
       message.success('Akun berhasil dibuat. Silakan verifikasi OTP.')
       navigate('/otp', { replace: true })
@@ -70,24 +71,27 @@ const RegisterPage = () => {
   })
 
   const onFinish = (values) => {
-  const isArtisan = values.role === USER_ROLES.ARTISAN
+    const isArtisan = role === USER_ROLES.ARTISAN
 
-  if (isArtisan && !ktpFile) {
-    message.error('Harap upload foto KTP Anda')
-    return
-  }
+    if (isArtisan && !ktpFile) {
+      message.error('Harap upload foto KTP Anda')
+      return
+    }
 
-  if (isArtisan && !values.village) {
-    message.error('Harap pilih dusun Anda')
-    return
-  }
+    if (isArtisan && !values.village) {
+      message.error('Harap pilih dusun Anda')
+      return
+    }
 
-  const formData = new FormData()
-    Object.entries(values).forEach(([key, value]) => {
-      formData.append(key, value)
-    })
+    const formData = new FormData()
+
+    formData.append('name', values.name)
+    formData.append('email', values.email)
+    formData.append('password', values.password)
+    formData.append('role', role)
 
     if (isArtisan) {
+      formData.append('village', values.village)
       formData.append('ktp', ktpFile)
     }
 
@@ -113,6 +117,7 @@ const RegisterPage = () => {
               name="role"
               label="Peran"
               rules={[{ required: true, message: 'Pilih peran' }]}
+              className='hidden'
             >
               <Select options={roleOptions} />
             </Form.Item>

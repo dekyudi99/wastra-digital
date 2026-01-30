@@ -2,7 +2,15 @@ import axiosClient from "./AxiosClient"
 
 const authApi = {
     register: (credentials) => {
-        return axiosClient.post('auth/register', credentials)
+        return axiosClient.post(
+            'auth/register',
+            credentials,
+            {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                }
+            }
+        )
     },
     login: (credentials) => {
         return axiosClient.post('auth/login', credentials)
