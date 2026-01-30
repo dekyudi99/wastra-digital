@@ -10,6 +10,9 @@ const conversationApi = {
     send: (conversationId, payload) => {
         return axiosClient.post(`messages/${conversationId}`, payload)
     },
+    getOrCreate: (userId) =>{
+        return axiosClient.post(`conversations/${userId}`)
+    }
 }
 
 export default conversationApi

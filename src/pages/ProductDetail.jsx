@@ -18,6 +18,7 @@ import productApi from '../api/ProductApi'
 import reviewApi from '../api/ReviewApi'
 import formatTanggal from '../utils/formatTanggal'
 import orderApi from '../api/OrderApi'
+import conversationApi from '../api/ConversationsApi'
 
 const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1)
@@ -53,6 +54,14 @@ const ProductDetail = () => {
     queryKey: ["review", productDetail?.data?.data[0].id],
     queryFn: () => reviewApi.getReviewProduct(productDetail?.data?.data[0].id),
     staleTime: Infinity,
+  })
+
+  const getConversation = useMutation({
+    mutationFn: (userId) =>
+      conversationApi.getOrCreate(userId),
+    onSuccess: (res) => {
+      navigate(`/chat/${res.data.data.conversation_id}`)
+    },
   })
   
   const isArtisan = localStorage.getItem("ROLE") == "artisan"
@@ -195,12 +204,12 @@ const ProductDetail = () => {
                         cancelText: 'Batal',
                         okType: 'primary',
                         onOk: () => {
-                          navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product.id}`)}`)
+                          navigate(`/onboarding?redirect=${encodeURIComponent(`/produk/${product[0].id}`)}`)
                         },
                       })
                       return
                     }
-                    navigate(`/chat/${product.artisan.id}?productId=${product.id}`)
+                    getConversation.mutate(product[0].user.id)
                   }}
                   className="border-wastra-brown-300 text-wastra-brown-700 hover:bg-wastra-brown-50 hover:border-wastra-brown-400 text-xs sm:text-sm h-9 sm:h-10"
                 >

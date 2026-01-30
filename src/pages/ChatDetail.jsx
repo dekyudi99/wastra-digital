@@ -19,7 +19,7 @@ const ChatDetail = () => {
       conversationApi.send(conversationId, {
         body: text,
       }),
-    onSuccess: (res) => {
+    onSuccess: () => {
       setBody('')
     },
     onError: (err) => {

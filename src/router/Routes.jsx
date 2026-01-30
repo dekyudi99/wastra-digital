@@ -32,6 +32,7 @@ import ArtisanProfile from '../pages/ArtisanProfile';
 import OtpPage from '../pages/OtpPage';
 import RouteNotFound from '../RouteNotFound';
 import loginGuard from "./loader/LoginGuard";
+import AiInsightPage from "../pages/AiInsightPage";
 
 const routes = createBrowserRouter([
   {
@@ -57,7 +58,9 @@ const routes = createBrowserRouter([
       { path: "pesanan", element: <OrderHistory /> },
       { path: "alamat", element: <AddressManagement /> },
       { path: "notifications", element: <Notifications /> },
-      { path:"/chat/:conversationId", element:<ChatDetail /> },
+      { path: "chat/:conversationId", element:<ChatDetail /> },
+
+      { path:"/ai", element: <AiInsightPage /> },
 
       // ================= ARTISAN ROUTES =================
       {

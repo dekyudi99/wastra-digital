@@ -12,6 +12,7 @@ import { formatPrice } from '../utils/format'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import userApi from '../api/UserApi'
 import orderApi from '../api/OrderApi'
+import conversationApi from '../api/ConversationsApi'
 
 const ArtisanShop = () => {
   const token = localStorage.getItem("AUTH_TOKEN")
@@ -72,6 +73,14 @@ const ArtisanShop = () => {
     addToCartMutation.mutate({ productId: product.id, quantity: 1 })
   }
 
+  const getConversation = useMutation({
+    mutationFn: (userId) =>
+      conversationApi.getOrCreate(userId),
+    onSuccess: (res) => {
+      navigate(`/chat/${res.data.data.conversation_id}`)
+    },
+  })
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-wastra-brown-50">
@@ -121,13 +130,13 @@ const ArtisanShop = () => {
               </div>
               <div className="flex flex-wrap justify-center md:justify-start gap-5 text-wastra-brown-600 mb-6">
                 <div className="flex items-center gap-2"><ShoppingBagIcon className="w-5 h-5 text-amber-600"/> {totalProducts} Produk</div>
-                <div className="flex items-center gap-2"><MapPinIcon className="w-5 h-5 text-red-500"/> Bali, Indonesia</div>
+                <div className="flex items-center gap-2"><MapPinIcon className="w-5 h-5 text-red-500"/> {artisan?.address || "Penjual Belum Mengatur Alamat!"} </div>
               </div>
               <Button
                 type="primary"
                 size="large"
                 icon={<ChatBubbleLeftRightIcon className="w-5 h-5" />}
-                onClick={() => navigate(`/chat/${id}`)}
+                onClick={() => getConversation.mutate(artisan.id)}
                 className="bg-wastra-brown-600 hover:bg-wastra-brown-700 border-none px-10 rounded-full shadow-lg h-12"
               >
                 Chat Penjual

@@ -2,6 +2,7 @@ import Header from './Header'
 import Footer from './Footer'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import AiFloatingButton from './AiFloatingButton'
 
 const Layout = () => {
   const location = useLocation()
@@ -36,13 +37,16 @@ const Layout = () => {
           isTransitioning ? 'opacity-0' : 'opacity-100'
         }`}
       >
-        <div className="page-transition w-full">
+        <div className="page-transition w-full pt-20">
           <Outlet/>
         </div>
       </main>
 
       {/* FOOTER */}
       {!shouldHideFooter && <Footer />}
+
+      {/* FLOATING AI BUTTON */}
+      <AiFloatingButton />
     </div>
   )
 }

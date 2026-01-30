@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Link, useLocation, useNavigate, NavLink } from 'react-router-dom'
-import { Input, Avatar, Modal, Dropdown, Menu, message, Spin, Drawer } from 'antd'
+import { useState, useEffect } from 'react'
+import { Link, useLocation, useNavigate, NavLink, useSearchParams } from 'react-router-dom'
+import { Input, Avatar, Modal, Dropdown, Menu, message, Spin, Drawer,Collapse } from 'antd'
 import { ExclamationCircleOutlined } from '@ant-design/icons'
 import { 
   BellIcon, 
@@ -18,11 +18,21 @@ import IconWeb from '../assets/logoWastraDigital.png'
 import userApi from '../api/UserApi'
 
 const Header = () => {
+  const [searchParams] = useSearchParams()
   const token = localStorage.getItem("AUTH_TOKEN");
+  const role = localStorage.getItem("ROLE");
+  const isAuthenticated = !!token;
   const location = useLocation()
   const navigate = useNavigate()
   const [searchValue, setSearchValue] = useState('')
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const q = searchParams.get('search')
+    if (q !== null) {
+      setSearchValue(q)
+    }
+  }, [location.pathname])
 
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
@@ -37,18 +47,22 @@ const Header = () => {
     },
   })
 
-  const {data: cartount, isLoading} = useQuery({
+  // 2. Gunakan properti 'enabled' untuk mengontrol eksekusi
+  const { data: cartount, isLoading: isLoadingCart } = useQuery({
     queryKey: ["cartCount"],
     queryFn: orderApi.cartCount,
+    // Query hanya jalan jika sudah login DAN rolenya 'customer'
+    enabled: isAuthenticated && role === "customer",
     retry: false,
-  })
+  });
 
-  const {data: userData, isLoading: loadingUser} = useQuery({
+  const { data: userData, isLoading: loadingUser } = useQuery({
     queryKey: ["user"],
     queryFn: userApi.profile,
+    enabled: isAuthenticated,
     staleTime: Infinity,
     retry: false,
-  })
+  });
   
   // Hanya tampilkan cart count jika user sudah login
   const cartCount = cartount?.data?.data?.total || ''
@@ -68,32 +82,38 @@ const Header = () => {
     }
   }
 
-  const navLinkClass = (path, exact = false) => {
-    let isActive = false
-    if (exact) {
-      isActive = location.pathname === path
-    } else {
-      // Untuk path yang lebih kompleks, gunakan startsWith
-      // Tapi pastikan tidak match dengan path yang lebih panjang
-      if (path === '/') {
-        isActive = location.pathname === '/'
-      } else {
-        isActive = location.pathname === path || location.pathname.startsWith(path + '/')
-      }
-    }
-    return [
-      'text-sm font-medium transition-colors decoration-2 underline-offset-4',
-      isActive
-        ? 'text-wastra-brown-800 underline font-semibold'
-        : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline',
-    ].join(' ')
-  }
-
-  const isAuthenticated = !!token;
+  const MENU = [
+    {
+      label: 'Beranda',
+      path: '/',
+      roles: ['guest', 'customer', 'artisan', 'admin'],
+    },
+    {
+      label: 'Katalog Produk',
+      path: '/produk',
+      roles: ['guest', 'customer', 'artisan', 'admin'],
+    },
+    {
+      label: 'Pengrajin',
+      roles: ['artisan'],
+      children: [
+        { label: 'Dashboard', path: '/pengrajin' },
+        { label: 'Kelola Produk', path: '/pengrajin/produk' },
+        { label: 'Pesanan Masuk', path: '/pengrajin/pesanan' },
+      ],
+    },
+    {
+      label: 'Admin',
+      roles: ['admin'],
+      children: [
+        { label: 'Dashboard Admin', path: '/admin' },
+      ],
+    },
+  ]
 
   return (
-    <header className="bg-white sticky top-0 z-50 border-b border-wastra-brown-100 w-full">
-      <div className="mx-auto max-w-6xl px-4 md:px-6">
+    <header className="bg-white fixed top-0 left-0 right-0 z-50 border-b border-wastra-brown-100 w-full flex flex-row justify-between">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-20 gap-4">
           <Link to="/" className="flex-shrink-0 flex flex-row items-center gap-1 no-underline">
             <img src={IconWeb} alt="" className='h-12'/>
@@ -110,7 +130,7 @@ const Header = () => {
           <div className="hidden lg:flex flex-1 max-w-md">
             <div className="flex w-full items-stretch">
               <Input
-                placeholder="Cari produk, kategori, atau pengrajin..."
+                placeholder="Cari produk..."
                 allowClear
                 size="large"
                 value={searchValue}
@@ -282,7 +302,7 @@ const Header = () => {
                 <ShoppingBagIcon className="w-5 h-5" />
                 {cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
-                    {isLoading?
+                    {isLoadingCart?
                       <Spin size='small'/>
                       :
                       cartCount
@@ -366,113 +386,79 @@ const Header = () => {
         {/* Mobile navigation drawer */}
         <Drawer
           title="Menu"
-          placement="right"
-          width={260}
+          placement="left"
+          width={280}
           onClose={() => setIsMobileMenuOpen(false)}
           open={isMobileMenuOpen}
         >
-          <nav className="flex flex-col gap-3">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `block py-1 text-sm font-medium ${
-                  isActive
-                    ? 'text-wastra-brown-800'
-                    : 'text-wastra-brown-600'
-                }`
+          <nav className="flex flex-col gap-2">
+            {MENU.filter(menu =>
+              menu.roles?.includes(user?.role || 'guest')
+            ).map((menu) => {
+              // MENU TANPA CHILD (link biasa)
+              if (!menu.children) {
+                return (
+                  <NavLink
+                    key={menu.label}
+                    to={menu.path}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={({ isActive }) =>
+                      `block py-2 px-2 rounded text-sm ${
+                        isActive
+                          ? 'bg-wastra-brown-100 text-wastra-brown-800 font-semibold'
+                          : 'text-wastra-brown-600'
+                      }`
+                    }
+                  >
+                    {menu.label}
+                  </NavLink>
+                )
               }
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Beranda
-            </NavLink>
 
-            <NavLink
-              to="/produk"
-              className={({ isActive }) =>
-                `block py-1 text-sm font-medium ${
-                  isActive
-                    ? 'text-wastra-brown-800'
-                    : 'text-wastra-brown-600'
-                }`
-              }
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Katalog Produk
-            </NavLink>
-
-            {user?.role === 'artisan' && (
-              <>
-                <NavLink
-                  to="/pengrajin"
-                  end
-                  className={({ isActive }) =>
-                    `block py-1 text-sm font-medium ${
-                      isActive
-                        ? 'text-wastra-brown-800'
-                        : 'text-wastra-brown-600'
-                    }`
-                  }
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Dashboard Pengrajin
-                </NavLink>
-                <NavLink
-                  to="/pengrajin/produk"
-                  className={({ isActive }) =>
-                    `block py-1 text-sm font-medium ${
-                      isActive
-                        ? 'text-wastra-brown-800'
-                        : 'text-wastra-brown-600'
-                    }`
-                  }
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Kelola Produk
-                </NavLink>
-                <NavLink
-                  to="/pengrajin/pesanan"
-                  className={({ isActive }) =>
-                    `block py-1 text-sm font-medium ${
-                      isActive
-                        ? 'text-wastra-brown-800'
-                        : 'text-wastra-brown-600'
-                    }`
-                  }
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Pesanan Masuk
-                </NavLink>
-              </>
-            )}
-
-            {user?.role === 'admin' && (
-              <NavLink
-                to="/admin"
-                className={({ isActive }) =>
-                  `block py-1 text-sm font-medium ${
-                    isActive
-                      ? 'text-wastra-brown-800'
-                      : 'text-wastra-brown-600'
-                  }`
-                }
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Dashboard Admin
-              </NavLink>
-            )}
+              // MENU DENGAN CHILD (dropdown)
+              return (
+                <Collapse
+                  key={menu.label}
+                  ghost
+                  items={[
+                    {
+                      key: menu.label,
+                      label: (
+                        <span className="font-medium text-wastra-brown-700">
+                          {menu.label}
+                        </span>
+                      ),
+                      children: (
+                        <div className="flex flex-col gap-2 pl-3">
+                          {menu.children.map((child) => (
+                            <NavLink
+                              key={child.path}
+                              to={child.path}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                              className={({ isActive }) =>
+                                `block py-1 text-sm ${
+                                  isActive
+                                    ? 'text-wastra-brown-800 font-semibold'
+                                    : 'text-wastra-brown-600'
+                                }`
+                              }
+                            >
+                              {child.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      ),
+                    },
+                  ]}
+                />
+              )
+            })}
 
             {!isAuthenticated && (
               <NavLink
                 to="/masuk"
-                className={({ isActive }) =>
-                  `block py-1 text-sm font-medium ${
-                    isActive
-                      ? 'text-wastra-brown-800'
-                      : 'text-wastra-brown-600'
-                  }`
-                }
                 onClick={() => setIsMobileMenuOpen(false)}
+                className="mt-3 py-2 text-sm text-wastra-brown-700 font-medium"
               >
                 Masuk
               </NavLink>
