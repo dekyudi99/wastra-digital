@@ -8,6 +8,8 @@ const loginGuard = () => {
         message.warning('Anda harus login dulu!')
         throw redirect('/masuk')
     }
+
+    return null
 }
 
 export default loginGuard

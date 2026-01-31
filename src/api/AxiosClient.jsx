@@ -27,9 +27,11 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response || error.response.status === 401) {
-            // localStorage.removeItem('AUTH_TOKEN')
-            // localStorage.removeItem('ROLE')
+        if (error.response && error.response.status === 401) {
+            localStorage.removeItem('AUTH_TOKEN')
+            localStorage.removeItem('ROLE')
+            localStorage.removeItem("USER_ID")
+            localStorage.removeItem("IS_ARTISAN")
         }
 
         return Promise.reject(error)
