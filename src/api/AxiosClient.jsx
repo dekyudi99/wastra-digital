@@ -1,8 +1,8 @@
 import axios from "axios"
 
 const axiosClient = axios.create({
-    // baseURL: 'http://localhost:8000/api/',
-    baseURL: 'https://apiwastradigital.ikya.my.id/api/',
+    baseURL: 'http://localhost:8000/api/',
+    // baseURL: 'https://apiwastradigital.ikya.my.id/api/',
     headers: {
         "Content-Type": "application/json",
         'Accept': 'application/json',

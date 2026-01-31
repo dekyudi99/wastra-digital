@@ -28,9 +28,11 @@ const LoginPage = () => {
 
       const { token, user } = data
 
+      // Simpan ke context / storage
       localStorage.setItem("AUTH_TOKEN", token)
       localStorage.setItem("ROLE", user.role)
       localStorage.setItem("USER_ID", user.id)
+      localStorage.setItem("IS_ARTISAN", user.isArtisan)
 
       message.success('Login berhasil')
 

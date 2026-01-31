@@ -33,6 +33,8 @@ import OtpPage from '../pages/OtpPage';
 import RouteNotFound from '../RouteNotFound';
 import loginGuard from "./loader/LoginGuard";
 import AiInsightPage from "../pages/AiInsightPage";
+import AdminArtisanPage from "../pages/AdminArtisanPage";
+import Upcoming from "../pages/Upcoming";
 
 const routes = createBrowserRouter([
   {
@@ -60,7 +62,9 @@ const routes = createBrowserRouter([
       { path: "notifications", element: <Notifications /> },
       { path: "chat/:conversationId", element:<ChatDetail /> },
 
-      { path:"/ai", element: <AiInsightPage /> },
+      { path: "ai", element: <AiInsightPage /> },
+
+      { path: "upcoming", element: <Upcoming/>},
 
       // ================= ARTISAN ROUTES =================
       {
@@ -84,6 +88,7 @@ const routes = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: "produk", element: <AdminProductManagement /> },
+          { path: "pengrajin/daftar", element: <AdminArtisanPage /> }
         ]
       },
     ]

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Card, Row, Col, Table, Button, Statistic, Tag, Space, Spin } from 'antd'
 import {
   ShoppingBagIcon,
@@ -9,7 +9,9 @@ import {
 } from '@heroicons/react/24/outline'
 import { useQuery } from '@tanstack/react-query'
 import { formatPrice } from '../utils/format'
-import orderApi from '../api/OrderApi' // Sesuaikan dengan file API Anda
+import orderApi from '../api/OrderApi'
+import adminApi from '../api/AdminApi'
+import { div } from 'framer-motion/client'
 
 const COMMISSION_RATE = 0.1
 
@@ -22,16 +24,43 @@ const AdminDashboard = () => {
     queryFn: () => orderApi.adminDashboardStats(), // Panggil fungsi backend tadi
   })
 
+  const {data: totalP, isLoading: loadingTotal} = useQuery({
+    queryKey: ["totalP"],
+    queryFn: adminApi.totalPendaftaran,
+    staleTime: 1000 * 60,
+  })
+
+  const {data: totalA, isLoading: loadingTotalA, isError: isErrorA, error: errorA} = useQuery({
+    queryKey: ["totalA"],
+    queryFn: adminApi.totalActiveArtisan,
+    staleTime: 1000 * 60,
+  })
+
+  const totalPendaftaran = totalP?.data?.data?.total
+  const totalActiveArtisan = totalA?.data?.data?.total
+
   const dashboardData = apiResponse?.data?.data
 
   const statsCards = [
-    { title: 'Pengrajin Aktif', value: dashboardData?.stats?.artisans || 0, icon: <UserGroupIcon className="w-6 h-6" />, color: '#78350F' },
-    { title: 'Produk Aktif', value: dashboardData?.stats?.products || 0, icon: <ShoppingBagIcon className="w-6 h-6" />, color: '#A16207' },
-    { title: 'Pesanan Berjalan', value: dashboardData?.stats?.ongoing_orders || 0, icon: <TruckIcon className="w-6 h-6" />, color: '#0EA5E9' },
+    { title: 'Pengrajin Aktif', value: totalActiveArtisan || 0, icon: <UserGroupIcon className="w-6 h-6" />, color: '#78350F', url: '' },
+    { title: 'Pendaftaran Pengrajin', value: totalPendaftaran || 0, icon: <ShoppingBagIcon className="w-6 h-6" />, color: '#A16207', url: 'pengrajin/daftar' },
+    { title: 'Pesanan Berjalan', value: dashboardData?.stats?.ongoing_orders || 0, icon: <TruckIcon className="w-6 h-6" />, color: '#0EA5E9', url: '' },
   ]
 
-  if (isLoading) return <div className="h-screen flex justify-center items-center"><Spin size="large" tip="Memuat Statistik..." /></div>
+  if (isLoading || loadingTotal || loadingTotalA) {
+    return <div className="h-screen flex justify-center items-center">
+      <Spin size="large" tip="Memuat Statistik..." />
+    </div>
+  }
 
+  if (isErrorA) {
+    return (
+      <div className='flex flex-col space-y-2'>
+        <h2 className='font-bold text-xl'>{errorA?.name}</h2>
+        <p>{errorA?.message}</p>
+      </div>
+    )
+  }
   return (
     <div className="w-full px-3 sm:px-4 max-w-7xl mx-auto py-6 sm:py-8">
       {/* Header */}
@@ -44,9 +73,11 @@ const AdminDashboard = () => {
       <Row gutter={[16, 16]} className="mb-8">
         {statsCards.map((item) => (
           <Col xs={24} sm={12} md={6} key={item.title}>
-            <Card borderless className="shadow-sm rounded-xl">
-              <Statistic title={item.title} value={item.value} prefix={item.icon} valueStyle={{ color: item.color, fontWeight: 700 }} />
-            </Card>
+            <Link to={item.url}>
+              <Card borderless className="shadow-sm rounded-xl">
+                <Statistic title={item.title} value={item.value} prefix={item.icon} valueStyle={{ color: item.color, fontWeight: 700 }} />
+              </Card>
+            </Link>
           </Col>
         ))}
         <Col xs={24} sm={12} md={6}>

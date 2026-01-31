@@ -59,6 +59,7 @@ const RegisterPage = () => {
       localStorage.setItem("AUTH_TOKEN", token)
       localStorage.setItem("ROLE", user.role)
       localStorage.setItem("USER_ID", user.id)
+      localStorage.setItem("IS_ARTISAN", user.isArtisan)
 
       message.success('Akun berhasil dibuat. Silakan verifikasi OTP.')
       navigate('/otp', { replace: true })
