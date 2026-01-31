@@ -186,7 +186,7 @@ const ProductCatalog = () => {
                             title: 'Login Diperlukan',
                             onOk: () =>
                               navigate(
-                                `/onboarding?redirect=${encodeURIComponent(
+                                `/masuk?redirect=${encodeURIComponent(
                                   `/produk/${product.id}`
                                 )}`
                               ),

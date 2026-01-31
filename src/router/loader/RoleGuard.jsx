@@ -16,7 +16,7 @@ const roleGuard = (requiredRole) => () => {
     throw redirect('/')
   }
 
-  if (localStorage.getItem("IS_ARTISAN") == "0") {
+  if (localStorage.getItem("IS_ARTISAN") == "0" && role == "artisan") {
     message.warning('Anda tidak bisa mengakses halaman ini!')
     throw redirect('/upcoming')
   }

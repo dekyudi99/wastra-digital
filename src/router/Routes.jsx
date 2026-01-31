@@ -62,7 +62,7 @@ const routes = createBrowserRouter([
       { path: "notifications", element: <Notifications /> },
       { path: "chat/:conversationId", element:<ChatDetail /> },
 
-      { path: "ai", element: <AiInsightPage /> },
+      { path: "ai", element: <AiInsightPage />, loader: loginGuard },
 
       { path: "upcoming", element: <Upcoming/>},
 
