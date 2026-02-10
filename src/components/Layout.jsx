@@ -1,0 +1,54 @@
+import Header from './Header'
+import Footer from './Footer'
+import { Outlet, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import AiFloatingButton from './AiFloatingButton'
+
+const Layout = () => {
+  const location = useLocation()
+  const [isTransitioning, setIsTransitioning] = useState(false)
+
+  // ❗ halaman yang TIDAK pakai footer
+  const hideFooterRoutes = [
+    '/notifications',
+    '/chat'
+  ]
+
+  const shouldHideFooter = hideFooterRoutes.some(path =>
+    location.pathname.startsWith(path)
+  )
+
+  // Handle page transition dengan animasi fade
+  useEffect(() => {
+    setIsTransitioning(true)
+    const timer = setTimeout(() => {
+      setIsTransitioning(false)
+    }, 200)
+    return () => clearTimeout(timer)
+  }, [location.pathname])
+
+  return (
+    <div className="min-h-screen flex flex-col min-w-screen md:w-full overflow-x-hidden">
+      <Header />
+
+      {/* MAIN dengan transisi */}
+      <main 
+        className={`flex-1 w-full transition-opacity duration-200 ease-in-out ${
+          isTransitioning ? 'opacity-0' : 'opacity-100'
+        }`}
+      >
+        <div className="page-transition w-full pt-20">
+          <Outlet/>
+        </div>
+      </main>
+
+      {/* FOOTER */}
+      {!shouldHideFooter && <Footer />}
+
+      {/* FLOATING AI BUTTON */}
+      <AiFloatingButton />
+    </div>
+  )
+}
+
+export default Layout
