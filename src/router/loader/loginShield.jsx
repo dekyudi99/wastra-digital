@@ -1,7 +1,7 @@
 import { redirect } from "react-router-dom";
 import { message } from "antd";
 
-const loginGuard = () => {
+const loginShield = () => {
     const token = localStorage.getItem('AUTH_TOKEN')
 
     if (!token) {
@@ -12,4 +12,4 @@ const loginGuard = () => {
     return null
 }
 
-export default loginGuard
+export default loginShield

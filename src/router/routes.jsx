@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 // Imports
 import Layout from '../components/Layout';
-import loginGuard from "./loader/Hapus_INi";
+import loginShield from "./loader/loginShield";
 import roleGuard from "./loader/roleGuard";
 
 // Pages
@@ -60,7 +60,7 @@ const routes = createBrowserRouter([
       { path: "notifications", element: <Notifications /> },
       { path: "chat/:conversationId", element:<ChatDetail /> },
 
-      { path: "ai", element: <AiInsightPage />, loader: loginGuard },
+      { path: "ai", element: <AiInsightPage />, loader: loginShield },
 
       { path: "upcoming", element: <Upcoming/>},
 
