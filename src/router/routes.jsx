@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 // Imports
 import Layout from '../components/Layout';
-import roleGuard from "./loader/RoleGuard";
+import roleGuard from "../loader/roleGuard";
 
 // Pages
 import LandingPage from '../pages/LandingPage';
@@ -29,7 +29,7 @@ import ArtisanOrders from '../pages/ArtisanOrders';
 import ArtisanProfile from '../pages/ArtisanProfile';
 import OtpPage from '../pages/OtpPage';
 import RouteNotFound from '../RouteNotFound';
-import loginGuard from "./loader/LoginGuard";
+import loginGuard from "../loader/loginGuard";
 import AiInsightPage from "../pages/AiInsightPage";
 import AdminArtisanPage from "../pages/AdminArtisanPage";
 import Upcoming from "../pages/Upcoming";
