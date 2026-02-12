@@ -1,8 +1,13 @@
 import axios from "axios"
 
+const baseURL = import.meta.env.VITE_API_BASE_URL;
+
+if (!baseURL) {
+    console.error("WARNING: VITE_API_BASE_URL is not defined! API requests might fail.");
+}
+
 const axiosClient = axios.create({
-    // baseURL: 'http://localhost:8000/api/',
-    baseURL: 'https://apiwastradigital.ikya.my.id/api/',
+    baseURL: baseURL || "localhost:8000",
     headers: {
         "Content-Type": "application/json",
         'Accept': 'application/json',
