@@ -2,7 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 
 // Imports
 import Layout from '../components/Layout';
-import roleGuard from "./loader/roleGuard";
+import roleGuard from "./loader/RoleGuard";
 
 // Pages
 import LandingPage from '../pages/LandingPage';
