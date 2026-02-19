@@ -159,7 +159,7 @@ const ProductDetail = () => {
                 <Tag color={product[0].category === 'Endek' ? 'blue' : 'gold'} className="mb-2 text-xs sm:text-sm">
                   {product[0].category === 'Endek' ? 'Endek' : 'Songket'}
                 </Tag>
-                <Tag color={'orange'} className={product[0].discount !== null && product[0].discount < 1? `hidden` : `mb-2 text-xs sm:text-sm`}>Hemat {product[0].discount}%</Tag>
+                <Tag color={'orange'} className={product[0].discount !== null || product[0].discount < 1? `hidden` : `mb-2 text-xs sm:text-sm`}>Hemat {product[0].discount}%</Tag>
               </div>
               <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-3 sm:mb-4 text-wastra-brown-800 leading-tight">{product.name}</h1>
               <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-3">

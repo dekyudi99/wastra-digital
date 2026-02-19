@@ -1,19 +1,24 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Card, Table, Tag, Button, Space, Modal, Descriptions, message, Select, Spin } from 'antd'
-import { EyeIcon, TruckIcon } from '@heroicons/react/24/outline'
+import { Card, Table, Tag, Button, Space, Modal, Descriptions, message, Select, Spin, Pagination } from 'antd'
+import { EyeIcon, TruckIcon, CheckBadgeIcon } from '@heroicons/react/24/outline'
 import { formatPrice } from '../utils/format'
 import orderApi from '../api/OrderApi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import AiFloatingButton from '../components/AiFloatingButton'
 
 const { Option } = Select
 
+const formatPajak = (price) => {
+  return price-((price*10)/100)
+}
+
 const STATUS_MAP = {
-  unpaid: { label: 'Belum Bayar', color: 'orange' },
-  paid: { label: 'Menunggu', color: 'processing' }, // Tampil sebagai Menunggu
+  pending: { label: 'Menunggu Konfirmasi', color: 'orange' },
   processing: { label: 'Diproses', color: 'blue' },
   shipped: { label: 'Dikirim', color: 'cyan' },
-  delivered: { label: 'Selesai', color: 'green' },
+  completed: { label: 'Selesai (Penjual)', color: 'green' }, // Dari sisi Anda
+  finish: { label: 'Selesai (Pembeli)', color: 'gold' },      // Konfirmasi pembeli
   cancelled: { label: 'Dibatalkan', color: 'red' },
 }
 
@@ -22,10 +27,13 @@ const ArtisanOrders = () => {
   const { id } = useParams()
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState('all')
+  const [page, setPage] = useState(1)
 
+  // Mengambil data dengan menyertakan page ke queryKey agar otomatis refetch saat page ganti
   const { data: orderResponse, isLoading: loadingList } = useQuery({
-    queryKey: ["ordersIn"],
-    queryFn: () => orderApi.orderIn(),
+    queryKey: ["ordersIn", statusFilter, page],
+    queryFn: () => orderApi.orderIn(page, statusFilter),
+    keepPreviousData: true,
   })
 
   const { data: detailResponse, isLoading: loadingDetail } = useQuery({
@@ -44,27 +52,32 @@ const ArtisanOrders = () => {
     onError: (err) => message.error(err.response?.data?.message || 'Gagal update status')
   })
 
-  const orders = Array.isArray(orderResponse?.data?.data) ? orderResponse.data.data : []
-  const filteredData = statusFilter === 'all' 
-    ? orders 
-    : orders.filter(o => o.status === statusFilter)
+  // Mapping data dari struktur API Laravel Pagination
+  const orders = orderResponse?.data?.data?.data || []
+  const paginationMeta = orderResponse?.data?.data || {}
 
-  const orderDetail = detailResponse?.data?.data // Merujuk pada objek Order dari backend
+  const orderDetail = detailResponse?.data?.data
 
   const columns = [
-    { title: 'Invoice', dataIndex: 'invoice_number', key: 'inv', render: (t) => <span className="font-mono">{t}</span> },
-    { title: 'Pembeli', dataIndex: ['user', 'name'], key: 'cust' },
+    { title: 'Invoice', dataIndex: ['order', 'order_code'], key: 'inv', render: (t) => <span className="font-mono font-bold text-blue-600">{t}</span> },
+    { title: 'Pembeli', dataIndex: ['order', 'buyer', 'name'], key: 'cust' },
     { title: 'Tanggal', dataIndex: 'created_at', render: (d) => new Date(d).toLocaleDateString('id-ID') },
     { 
       title: 'Status', 
-      dataIndex: 'status', 
-      render: (s) => <Tag color={STATUS_MAP[s]?.color}>{STATUS_MAP[s]?.label.toUpperCase()}</Tag> 
+      dataIndex: 'item_status', 
+      render: (s) => <Tag color={STATUS_MAP[s]?.color || 'default'}>{STATUS_MAP[s]?.label?.toUpperCase() || s}</Tag> 
     },
     { 
       title: 'Aksi', 
       key: 'action', 
       render: (_, r) => (
-        <Button icon={<EyeIcon className="w-4 h-4" />} onClick={() => navigate(`/pengrajin/pesanan/${r.id}`)}>
+        <Button 
+          type="primary"
+          ghost
+          icon={<EyeIcon className="w-4 h-4 mr-1" />} 
+          onClick={() => navigate(`/pengrajin/pesanan/${r.id}`)}
+          className="flex items-center"
+        >
           Detail
         </Button>
       ) 
@@ -72,70 +85,126 @@ const ArtisanOrders = () => {
   ]
 
   return (
-    <div className="bg-wastra-brown-50 min-h-screen w-full pb-10">
+    <div className="bg-gray-50 min-h-screen w-full pb-10">
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-wastra-brown-800">Daftar Pesanan Masuk</h1>
-          <Select value={statusFilter} onChange={setStatusFilter} style={{ width: 200 }}>
-            <Option value="all">Semua Pesanan</Option>
-            {Object.entries(STATUS_MAP).map(([k, v]) => <Option key={k} value={k}>{v.label}</Option>)}
-          </Select>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h1 className="text-3xl font-bold text-gray-800">Daftar Pesanan Masuk</h1>
+          <div className="flex items-center gap-3">
+            <span className="text-gray-500">Filter Status:</span>
+            <Select value={statusFilter} onChange={(v) => { setStatusFilter(v); setPage(1); }} style={{ width: 220 }}>
+              <Option value="all">Semua Pesanan</Option>
+              {Object.entries(STATUS_MAP).map(([k, v]) => <Option key={k} value={k}>{v.label}</Option>)}
+            </Select>
+          </div>
         </div>
 
-        <Card borderless className="shadow-sm rounded-xl">
-          <Table columns={columns} dataSource={filteredData} rowKey="id" loading={loadingList} />
+        <Card borderless className="shadow-md rounded-xl">
+          <div className='overflow-x-auto'>
+            <Table 
+              columns={columns} 
+              dataSource={orders} 
+              rowKey="id" 
+              loading={loadingList} 
+              pagination={false} // Matikan pagination internal Table
+            />
+          </div>
+          <div className="flex justify-end p-6 border-t">
+            <Pagination
+              current={page}
+              total={paginationMeta.total}
+              pageSize={paginationMeta.per_page || 5}
+              onChange={(p) => setPage(p)}
+              showSizeChanger={false}
+              showTotal={(total) => `${page} dari ${paginationMeta.last_page}`}
+            />
+          </div>
         </Card>
 
         <Modal
-          title={orderDetail ? `Invoice: ${orderDetail.invoice_number}` : "Memuat..."}
+          title={orderDetail ? `Detail Invoice: ${orderDetail[0].order.order_code}` : "Memuat Detail..."}
           open={!!id}
           onCancel={() => navigate('/pengrajin/pesanan')}
           footer={null}
-          width={800}
+          width={850}
+          centered
         >
-          {loadingDetail ? <div className="text-center p-10"><Spin /></div> : orderDetail && (
-            <div className="space-y-6">
-              <Descriptions bordered column={1} size="small">
-                <Descriptions.Item label="Nama Pembeli">{orderDetail.user?.name}</Descriptions.Item>
-                <Descriptions.Item label="Alamat Pengiriman">{orderDetail.shipping_address}</Descriptions.Item>
+          {loadingDetail ? <div className="text-center p-10"><Spin size="large" /></div> : orderDetail && (
+            <div className="space-y-6 pt-4">
+              <Descriptions bordered column={1} size="small" className="bg-white">
+                <Descriptions.Item label="Nama Pembeli">{orderDetail[0].order.buyer.name}</Descriptions.Item>
+                <Descriptions.Item label="No. Telepon">{orderDetail[0].order.buyer.phone}</Descriptions.Item>
+                <Descriptions.Item label="Alamat Pengiriman" span={2}>{orderDetail[0].order.shipping_address}</Descriptions.Item>
+                <Descriptions.Item label="Status Pembayaran">
+                  <Tag color={orderDetail.payment_status === 'settled' ? 'green' : 'red'}>
+                    {orderDetail[0].order.payment_status?.toUpperCase()}
+                  </Tag>
+                </Descriptions.Item>
               </Descriptions>
 
-              <h3 className="font-bold text-lg border-b pb-2">Produk Milik Anda</h3>
-              <Table
-                dataSource={orderDetail.item} // Mengambil dari array 'item'
-                rowKey="id"
-                pagination={false}
-                columns={[
-                  { title: 'Produk', dataIndex: 'name_at_purchase' },
-                  { title: 'Qty', dataIndex: 'quantity', align: 'center' },
-                  { title: 'Subtotal', dataIndex: 'subtotal', render: (v) => formatPrice(v) },
-                  { 
-                    title: 'Status Item', 
-                    dataIndex: 'status', 
-                    render: (s) => <Tag color={STATUS_MAP[s].color}>{STATUS_MAP[s].label}</Tag> 
-                  },
-                  { 
-                    title: 'Aksi', 
-                    key: 'ops', 
-                    render: (_, item) => (
-                      <Space>
-                        {item.status === 'paid' && (
-                          <Button size="small" type="primary" onClick={() => updateStatusMutation.mutate({ orderItemId: item.id, status: 'processing' })}>Proses</Button>
-                        )}
-                        {item.status === 'processing' && (
-                          <Button size="small" className="bg-orange-500 text-white border-none" icon={<TruckIcon className="w-4 h-4 inline-block mr-1"/>} onClick={() => updateStatusMutation.mutate({ orderItemId: item.id, status: 'shipped' })}>Kirim</Button>
-                        )}
-                      </Space>
-                    )
-                  }
-                ]}
-              />
+              <h3 className="font-bold text-lg border-b pb-2 text-gray-700">Item Produk</h3>
+              <div className='overflow-x-auto'>
+                <Table
+                  dataSource={orderDetail}
+                  rowKey="id"
+                  pagination={false}
+                  columns={[
+                    { title: 'Produk', dataIndex: 'name_at_purchase' },
+                    { title: 'Qty', dataIndex: 'quantity', align: 'center' },
+                    { title: 'Harga', dataIndex: 'price_at_purchase', render: (v) => formatPrice(v) },
+                    { title: 'Subtotal', dataIndex: 'subtotal', render: (v) => formatPrice(v) },
+                    { 
+                      title: 'Status', 
+                      dataIndex: 'item_status', 
+                      render: (s) => <Tag color={STATUS_MAP[s]?.color}>{STATUS_MAP[s]?.label}</Tag> 
+                    },
+                    { 
+                      title: 'Aksi', 
+                      key: 'ops', 
+                      render: (_, record) => ( // Diubah dari 'items' ke 'record' agar tidak bingung
+                        <Space>
+                          {record.item_status === 'pending' && (
+                            <Button 
+                              size="small"
+                              type="primary"
+                              loading={updateStatusMutation.isPending}
+                              onClick={() => updateStatusMutation.mutate({ orderItemId: record.id, status: 'processing' })}
+                            >
+                              Proses
+                            </Button>
+                          )}
+                          {record.item_status === 'processing' && (
+                            <Button 
+                              size="small"
+                              className="bg-orange-500 hover:bg-orange-600 text-white border-none flex items-center"
+                              icon={<TruckIcon className="w-4 h-4 mr-1"/>}
+                              loading={updateStatusMutation.isPending}
+                              onClick={() => updateStatusMutation.mutate({ orderItemId: record.id, status: 'shipped' })}
+                            >
+                              Kirim
+                            </Button>
+                          )}
+                          {record.item_status === 'shipped' && (
+                            <Button
+                              size="small"
+                              className="bg-green-600 hover:bg-green-700 text-white border-none flex items-center"
+                              icon={<CheckBadgeIcon className="w-4 h-4 mr-1"/>}
+                              loading={updateStatusMutation.isPending}
+                              onClick={() => updateStatusMutation.mutate({ orderItemId: record.id, status: 'completed' })}>
+                              Selesaikan
+                            </Button>
+                          )}
+                        </Space>
+                      )
+                    }
+                  ]}
+                />
+              </div>
 
-              <div className="flex justify-end p-4 bg-gray-50 rounded-lg">
+              <div className="flex justify-end p-4 bg-gray-100 rounded-lg">
                 <div className="text-right">
-                  <span className="text-gray-500 block text-xs">Total Pendapatan Anda dari Invoice ini:</span>
-                  <span className="text-xl font-bold text-red-600">
-                    {formatPrice(orderDetail.item?.reduce((sum, i) => sum + i.subtotal, 0))}
+                  <span className="text-gray-500 block text-xs mb-1">Total Pendapatan Anda dari Invoice ini {'(Pajak 10%)'}:</span>
+                  <span className="text-2xl font-bold text-red-600">
+                    {formatPrice((formatPajak(orderDetail[0].subtotal)))}
                   </span>
                 </div>
               </div>
@@ -143,6 +212,8 @@ const ArtisanOrders = () => {
           )}
         </Modal>
       </div>
+
+      <AiFloatingButton />
     </div>
   )
 }

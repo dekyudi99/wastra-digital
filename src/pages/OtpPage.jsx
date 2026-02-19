@@ -28,11 +28,15 @@ const OtpPage = () => {
         message.success('Verifikasi email berhasil')
 
         const role = localStorage.getItem("ROLE")
+        const status = localStorage.getItem("STATUS")
 
         // Redirect berdasarkan role
         if (role == 'admin') {
             navigate('/admin', { replace: true })
         } else if (role == 'artisan') {
+            if (status != 'approved') {
+              navigate('/')
+            }
             navigate('/pengrajin', { replace: true })
         } else {
             window.location.href = '/';

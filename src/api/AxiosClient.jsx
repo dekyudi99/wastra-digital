@@ -7,7 +7,7 @@ if (!baseURL) {
 }
 
 const axiosClient = axios.create({
-    baseURL: baseURL || "localhost:8000",
+    baseURL: baseURL,
     headers: {
         "Content-Type": "application/json",
         'Accept': 'application/json',
@@ -36,7 +36,7 @@ axiosClient.interceptors.response.use(
             localStorage.removeItem('AUTH_TOKEN')
             localStorage.removeItem('ROLE')
             localStorage.removeItem("USER_ID")
-            localStorage.removeItem("IS_ARTISAN")
+            localStorage.removeItem("STATUS")
         }
 
         return Promise.reject(error)

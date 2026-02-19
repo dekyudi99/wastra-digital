@@ -33,8 +33,17 @@ import RouteNotFound from '../RouteNotFound';
 import AiInsightPage from "../pages/AiInsightPage";
 import AdminArtisanPage from "../pages/AdminArtisanPage";
 import Upcoming from "../pages/Upcoming";
+import ForgetPassword from "../pages/ForgetPassword";
+import AfterForgetPassword from "../pages/AfterForgetPassword";
+import SuccessChangePassword from "../pages/SuccessChangePassword";
+import ListOrder from "../pages/ListOrder";
+import OrderDetailStatus from "../pages/OrderDetailStatus";
+import OrderDetail from "../pages/OrderDetail";
+import PaymentSuccess from "../pages/PaymentSuccess";
+import Withdrawal from "../pages/Withdrawal";
 
 const routes = createBrowserRouter([
+  { path: '/payment/success', element:<PaymentSuccess/>},
   {
     path: "/",
     element: <Layout />,
@@ -47,8 +56,11 @@ const routes = createBrowserRouter([
       { path: "artisan/:id", element: <ArtisanShop /> },
       { path: "onboarding", element: <AuthOnboarding /> },
       { path: "masuk", element: <LoginPage /> },
+      { path: "lupa-password", element: <ForgetPassword/>},
       { path: "daftar", element: <RegisterPage /> },
       { path: "lupa-password", element: <ForgotPassword /> },
+      { path: "cek-email", element: <AfterForgetPassword /> },
+      { path: "success/change-password", element: <SuccessChangePassword /> },
       { path: "otp", element: <OtpPage /> },
       { path: "keranjang", element: <Cart />, loader: roleGuard('customer') },
 
@@ -60,9 +72,14 @@ const routes = createBrowserRouter([
       { path: "notifications", element: <Notifications /> },
       { path: "chat/:conversationId", element:<ChatDetail /> },
 
+      { path: "pesanan/list", element: <ListOrder/>, loader: loginShield},
+
       { path: "ai", element: <AiInsightPage />, loader: loginShield },
 
       { path: "upcoming", element: <Upcoming/>},
+
+      { path: "pesanan/detail/:id", element: <OrderDetailStatus/>, loader: loginShield},
+      { path: "pesanan/detail/unpaid/:id", element: <OrderDetail/>, loader: loginShield},
 
       // ================= ARTISAN ROUTES =================
       {
@@ -76,6 +93,7 @@ const routes = createBrowserRouter([
           { path: "pesanan", element: <ArtisanOrders /> },
           { path: "pesanan/:id", element: <ArtisanOrders /> },
           { path: "profil", element: <ArtisanProfile /> },
+          { path: "withdrawal", element: <Withdrawal /> },
         ]
       },
 

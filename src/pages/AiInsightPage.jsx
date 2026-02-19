@@ -4,8 +4,14 @@ import AiSkeleton from '../components/AiSkeleton'
 import AiInsightContent from '../components/AiInsightContent'
 import HealthScoreContent from '../components/HealthScoreContent'
 import StockDiscountContent from '../components/StockDiscountContent'
-import TenunGuideForm from '../components/TenunGuideForm'
-import TenunGuideContent from '../components/TenunGuideContent'
+import TenunGuideSection from '../components/TenunGuideSection'
+
+const INSIGHT = {
+  OVERVIEW: 'overview',
+  HEALTH: 'health',
+  STOCK: 'stock',
+  TENUN: 'tenunGuide',
+}
 
 const endpointMap = {
   buyer: {
@@ -19,55 +25,64 @@ const endpointMap = {
 }
 
 const AiInsightPage = () => {
-  const [mode, setMode] = useState('buyer') // buyer | seller
-  const [insightType, setInsightType] = useState('overview')
+  const [mode, setMode] = useState('buyer')
+  const [insightType, setInsightType] = useState(INSIGHT.OVERVIEW)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
 
-  // tentukan mode dari role
+  // Tentukan role & default tab
   useEffect(() => {
     const role = localStorage.getItem('ROLE')
+
     if (role === 'artisan') {
       setMode('seller')
-      setInsightType('overview')
+      setInsightType(INSIGHT.TENUN) // pengrajin langsung ke Tenun
     } else {
       setMode('buyer')
-      setInsightType('overview')
+      setInsightType(INSIGHT.OVERVIEW)
     }
   }, [])
 
-  // fetch insight (kecuali tenun)
+  // Fetch insight non-tenun
   useEffect(() => {
-    if (insightType === 'tenun') {
-      setData(null)
-      return
-    }
+    if (insightType === INSIGHT.TENUN) return
 
     const endpoint = endpointMap[mode]?.[insightType]
     if (!endpoint) return
 
+    const controller = new AbortController()
+
     setLoading(true)
+
     axiosClient
-      .get(endpoint)
+      .get(endpoint, { signal: controller.signal })
       .then(res => setData(res.data.data))
+      .catch(e => {
+        if (e.name !== 'CanceledError') console.error(e)
+      })
       .finally(() => setLoading(false))
+
+    return () => controller.abort()
   }, [mode, insightType])
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
 
-      {/* NAV KHUSUS SELLER */}
+      {/* NAV SELLER */}
       {mode === 'seller' && (
         <div className="flex gap-2 flex-wrap">
           {[
-            ['overview', 'Ringkasan'],
-            ['health', 'Health Score'],
-            ['stock', 'Stok & Diskon'],
-            ['tenun', 'Panduan Tenun'],
+            [INSIGHT.TENUN, 'Panduan Tenun'],
+            [INSIGHT.OVERVIEW, 'Ringkasan'],
+            [INSIGHT.HEALTH, 'Health Score'],
+            [INSIGHT.STOCK, 'Stok & Diskon'],
           ].map(([key, label]) => (
             <button
               key={key}
-              onClick={() => setInsightType(key)}
+              onClick={() => {
+                setInsightType(key)
+                if (key !== INSIGHT.TENUN) setData(null)
+              }}
               className={`px-3 py-1 rounded text-sm ${
                 insightType === key
                   ? 'bg-indigo-100 text-indigo-700'
@@ -80,7 +95,7 @@ const AiInsightPage = () => {
         </div>
       )}
 
-      {/* BUYER TIDAK PUNYA NAV */}
+      {/* BUYER */}
       {mode === 'buyer' && (
         <p className="text-sm text-gray-500">
           Insight dihasilkan dari data penjualan & ulasan produk.
@@ -89,24 +104,21 @@ const AiInsightPage = () => {
 
       {loading && <AiSkeleton />}
 
-      {/* RENDER CONTENT */}
-      {data && insightType === 'overview' && (
+      {/* CONTENT */}
+      {data && insightType === INSIGHT.OVERVIEW && (
         <AiInsightContent data={data} mode={mode} />
       )}
 
-      {mode === 'seller' && data && insightType === 'health' && (
+      {mode === 'seller' && data && insightType === INSIGHT.HEALTH && (
         <HealthScoreContent data={data} />
       )}
 
-      {mode === 'seller' && data && insightType === 'stock' && (
+      {mode === 'seller' && data && insightType === INSIGHT.STOCK && (
         <StockDiscountContent data={data} />
       )}
 
-      {mode === 'seller' && insightType === 'tenun' && (
-        <>
-          <TenunGuideForm onResult={setData} />
-          {data && <TenunGuideContent data={data} />}
-        </>
+      {mode === 'seller' && insightType === INSIGHT.TENUN && (
+        <TenunGuideSection />
       )}
     </div>
   )

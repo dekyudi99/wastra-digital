@@ -204,17 +204,8 @@ const Checkout = () => {
             type="primary" 
             size="large" 
             className="bg-amber-800 h-12 px-10 rounded-lg"
-            loading={createOrderMutation.isLoading}
-            onClick={() => {
-              Modal.confirm({
-                title: "Konfirmasi Checkout",
-                icon: <ExclamationCircleIcon className='h-7 text-amber-600'/>,
-                content: `Anda akan melakukan pembayaran untuk pesanan ini. Lanjutkan?`,
-                okText: "Ya!",
-                cancelText: "Nggak Jadi Deh!",
-                onOk: () => {handleCheckout} 
-              });
-            }}
+            loading={createOrderMutation.isPending || directOrderMutation.isPending}
+            onClick={handleCheckout}
           >
             Bayar Sekarang
           </Button>

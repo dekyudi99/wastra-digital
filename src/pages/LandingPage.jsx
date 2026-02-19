@@ -13,8 +13,14 @@ import endekImg from '../assets/endek.jpg'
 import songketImg from '../assets/songket.jpg'
 import { useQuery } from '@tanstack/react-query'
 import productApi from '../api/ProductApi'
+import { useEffect } from 'react'
+import AiFloatingButton from '../components/AiFloatingButton'
 
 const LandingPage = () => {
+  useEffect(()=>{
+    document.title = "Wastra Digital"  
+  }, [])
+
   useRevealOnScroll()
   const {data: songket, isLoading: loadingSongket} = useQuery({
     queryKey: ['songket'],
@@ -86,8 +92,15 @@ const LandingPage = () => {
             <div className="space-y-6">
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 text-sm text-wastra-brown-600 bg-white/70 border border-wastra-brown-100 rounded-full px-4 py-2 w-fit">
-                  <MapPinIcon className="w-4 h-4" />
-                  Desa Sidemen • Karangasem • Bali
+                  <a
+                    href="https://maps.app.goo.gl/f4j3wQpRUhkrJnVq5" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className='flex flex-row gap-2'
+                  >
+                    <MapPinIcon className="w-4 h-4" />
+                    Desa Sidemen, Karangasem, Bali
+                  </a>
                 </div>
                 <h1 className="text-5xl lg:text-6xl font-light text-wastra-brown-800 leading-tight">
                   Marketplace Wastra
@@ -475,6 +488,9 @@ const LandingPage = () => {
           </Link>
         </div>
       </section>
+      
+      {/* FLOATING AI BUTTON */}
+      <AiFloatingButton />
     </div>
   )
 }

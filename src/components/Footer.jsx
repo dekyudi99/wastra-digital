@@ -40,15 +40,21 @@ const Footer = () => {
             <ul className="space-y-3 text-sm text-wastra-brown-300">
               <li className="flex gap-3">
                 <MapPinIcon className="w-5 h-5 flex-shrink-0" />
-                <span>Desa Sidemen, Karangasem, Bali</span>
+                <a
+                  href="https://maps.app.goo.gl/f4j3wQpRUhkrJnVq5" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                >
+                  Desa Sidemen, Karangasem, Bali
+                </a>
               </li>
-              <li className="flex gap-3">
+              {/* <li className="flex gap-3">
                 <PhoneIcon className="w-5 h-5 flex-shrink-0" />
                 <span>+62 XXX XXX XXXX</span>
-              </li>
+              </li> */}
               <li className="flex gap-3">
                 <EnvelopeIcon className="w-5 h-5 flex-shrink-0" />
-                <span>info@wastradigital.com</span>
+                <span>wastradigital@gmail.com</span>
               </li>
             </ul>
           </div>

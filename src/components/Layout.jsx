@@ -2,7 +2,6 @@ import Header from './Header'
 import Footer from './Footer'
 import { Outlet, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import AiFloatingButton from './AiFloatingButton'
 
 const Layout = () => {
   const location = useLocation()
@@ -44,9 +43,6 @@ const Layout = () => {
 
       {/* FOOTER */}
       {!shouldHideFooter && <Footer />}
-
-      {/* FLOATING AI BUTTON */}
-      <AiFloatingButton />
     </div>
   )
 }

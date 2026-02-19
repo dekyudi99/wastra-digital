@@ -4,7 +4,8 @@ import { Card, Table, Button, Space, Tag, Modal, Form, Input, InputNumber, Selec
 import { PlusIcon, PencilIcon, TrashIcon, ArrowLeftIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatPrice } from '../utils/format'
-import productApi from '../api/ProductApi' 
+import productApi from '../api/ProductApi'
+import AiFloatingButton from '../components/AiFloatingButton'
 
 const { Option } = Select
 const { TextArea } = Input
@@ -182,16 +183,18 @@ const ArtisanProducts = () => {
             </Button>
           )}
         </div>
-
+          
         {(!isAddMode && !isEditMode) ? (
           <Card borderless className="shadow-sm rounded-xl overflow-hidden">
-            <Table 
-              columns={columns} 
-              dataSource={productsRes?.data?.data || []} 
-              rowKey="id" 
-              loading={loadingList}
-              pagination={{ pageSize: 8 }}
-            />
+            <div className='overflow-x-auto'>
+              <Table 
+                columns={columns} 
+                dataSource={productsRes?.data?.data || []} 
+                rowKey="id" 
+                loading={loadingList}
+                pagination={{ pageSize: 8 }}
+              />
+            </div>
           </Card>
         ) : (
           <Card borderless className="shadow-sm rounded-xl">
@@ -280,6 +283,9 @@ const ArtisanProducts = () => {
           </Card>
         )}
       </div>
+
+      {/* FLOATING AI BUTTON */}
+      <AiFloatingButton />
     </div>
   )
 }

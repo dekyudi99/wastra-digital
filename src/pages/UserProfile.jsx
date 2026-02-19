@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Form, Input, Button, Upload, Avatar, message, Tabs, Spin } from 'antd'
-import { UserIcon, CameraIcon, ArrowLeftIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { Form, Input, Button, Upload, Avatar, message, Tabs, Spin } from 'antd'
+import { UserIcon, CameraIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { ROLE_LABELS_ID } from '../utils/authRoles'
 import userApi from '../api/UserApi'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link } from 'react-router-dom'
 
 const { TabPane } = Tabs
 
 const UserProfile = () => {
+  useEffect(()=>{
+    document.title = "Profil | Wastra Digital"  
+  }, [])
+
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [form] = Form.useForm()
@@ -43,6 +48,7 @@ const UserProfile = () => {
     onSuccess: () => {
       message.success('Profil berhasil diperbarui')
       queryClient.invalidateQueries(["userProfile"])
+      setPreviewImage(null);
       setFileList([])
     },
     onError: (err) => message.error(err.response?.data?.message || 'Gagal update profil')
@@ -163,6 +169,11 @@ const UserProfile = () => {
               <Form.Item name="currentPassword" label="Password Saat Ini" rules={[{ required: true }]}>
                 <Input.Password size="large" />
               </Form.Item>
+
+              <div className="-mt-4 text-sm text-wastra-brown-600 flex flex-row justify-end">
+                <Link to={'/lupa-password'}>Lupa kata sandi?</Link>
+              </div>
+
               <Form.Item name="newPassword" label="Password Baru" rules={[{ required: true, min: 8 }]}>
                 <Input.Password size="large" />
               </Form.Item>

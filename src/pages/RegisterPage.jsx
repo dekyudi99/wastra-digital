@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Form, Input, Select, Upload, message } from 'antd'
 import { InboxOutlined } from '@ant-design/icons'
@@ -23,6 +23,10 @@ const roleOptions = [
 ]
 
 const RegisterPage = () => {
+  useEffect(()=>{
+    document.title = "Daftar | Wastra Digital"  
+  }, [])
+
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const [ktpFile, setKtpFile] = useState(null)
@@ -59,7 +63,7 @@ const RegisterPage = () => {
       localStorage.setItem("AUTH_TOKEN", token)
       localStorage.setItem("ROLE", user.role)
       localStorage.setItem("USER_ID", user.id)
-      localStorage.setItem("IS_ARTISAN", user.isArtisan)
+      localStorage.setItem("STATUS", user.status)
 
       message.success('Akun berhasil dibuat. Silakan verifikasi OTP.')
       navigate('/otp', { replace: true })

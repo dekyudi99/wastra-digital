@@ -24,6 +24,9 @@ const authApi = {
     logout: () => {
         return axiosClient.post('auth/logout')
     },
+    forgetPassword: (email) => {
+        return axiosClient.post('auth/forget-password', email)
+    }
 }
 
 export default authApi

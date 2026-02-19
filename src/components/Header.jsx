@@ -37,8 +37,10 @@ const Header = () => {
   const logoutMutation = useMutation({
     mutationFn: authApi.logout,
     onSuccess: () => {
-      localStorage.removeItem("AUTH_TOKEN")
-      localStorage.removeItem("ROLE")
+      localStorage.removeItem('AUTH_TOKEN')
+      localStorage.removeItem('ROLE')
+      localStorage.removeItem("USER_ID")
+      localStorage.removeItem("STATUS")
       window.location.href = '/';
       message.success('Berhasil logout')
     },
@@ -115,6 +117,13 @@ const Header = () => {
     <header className="bg-white fixed top-0 left-0 right-0 z-50 border-b border-wastra-brown-100 w-full flex flex-row justify-between">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between h-20 gap-4">
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="md:hidden w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
+          >
+            <Bars3Icon className="w-6 h-6" />
+          </button>
           <Link to="/" className="flex-shrink-0 flex flex-row items-center gap-1 no-underline">
             <img src={IconWeb} alt="" className='h-12'/>
             <div className="flex flex-col leading-tight">
@@ -231,6 +240,21 @@ const Header = () => {
                   }
                 >
                   Dashboard Admin
+                </NavLink>
+              )}
+
+              {user?.role === "customer" && (
+                <NavLink 
+                  to="/pesanan/list"
+                  className={({ isActive }) => 
+                    `text-sm font-medium transition-colors decoration-2 underline-offset-4 ${
+                      isActive 
+                        ? 'text-wastra-brown-800 underline font-semibold' 
+                        : 'text-wastra-brown-600 hover:text-wastra-brown-800 no-underline hover:underline'
+                    }`
+                  }
+                >
+                  Pesanan
                 </NavLink>
               )}
 
@@ -370,14 +394,6 @@ const Header = () => {
                   <UserIcon className="w-5 h-5" />
                 </Link>
               )}
-
-              <button
-                type="button"
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="md:hidden w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors"
-              >
-                <Bars3Icon className="w-6 h-6" />
-              </button>
 
             </div>
           </div>
