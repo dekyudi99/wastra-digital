@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import axiosClient from '../api/AxiosClient'
 import AiSkeleton from '../components/AiSkeleton'
 import AiInsightContent from '../components/AiInsightContent'
@@ -6,120 +7,71 @@ import HealthScoreContent from '../components/HealthScoreContent'
 import StockDiscountContent from '../components/StockDiscountContent'
 import TenunGuideSection from '../components/TenunGuideSection'
 
-const INSIGHT = {
-  OVERVIEW: 'overview',
-  HEALTH: 'health',
-  STOCK: 'stock',
-  TENUN: 'tenunGuide',
-}
+const AiInsightPage = () => {
+  const role = localStorage.getItem('ROLE') === 'artisan' ? 'seller' : 'buyer'
+  const [activeTab, setActiveTab] = useState(role === 'seller' ? 'tenun' : 'overview')
 
-const endpointMap = {
-  buyer: {
-    overview: '/ai/buyer',
-  },
-  seller: {
-    overview: '/ai/seller',
+  const endpointMap = {
+    overview: role === 'seller' ? '/ai/seller' : '/ai/buyer',
     health: '/ai/seller/health-score',
     stock: '/ai/seller/stock-discount',
-  },
-}
+  }
 
-const AiInsightPage = () => {
-  const [mode, setMode] = useState('buyer')
-  const [insightType, setInsightType] = useState(INSIGHT.OVERVIEW)
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
+  // TanStack Query otomatis menghandle fetch & caching
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['insight', role, activeTab],
+    queryFn: async () => {
+      const res = await axiosClient.get(endpointMap[activeTab])
+      return res.data.data
+    },
+    enabled: activeTab !== 'tenun', // Jangan fetch jika di tab tenun (tenun punya query sendiri)
+    staleTime: 1000 * 60 * 5, // Data dianggap segar selama 5 menit
+  })
 
-  // Tentukan role & default tab
-  useEffect(() => {
-    const role = localStorage.getItem('ROLE')
-
-    if (role === 'artisan') {
-      setMode('seller')
-      setInsightType(INSIGHT.TENUN) // pengrajin langsung ke Tenun
-    } else {
-      setMode('buyer')
-      setInsightType(INSIGHT.OVERVIEW)
-    }
-  }, [])
-
-  // Fetch insight non-tenun
-  useEffect(() => {
-    if (insightType === INSIGHT.TENUN) return
-
-    const endpoint = endpointMap[mode]?.[insightType]
-    if (!endpoint) return
-
-    const controller = new AbortController()
-
-    setLoading(true)
-
-    axiosClient
-      .get(endpoint, { signal: controller.signal })
-      .then(res => setData(res.data.data))
-      .catch(e => {
-        if (e.name !== 'CanceledError') console.error(e)
-      })
-      .finally(() => setLoading(false))
-
-    return () => controller.abort()
-  }, [mode, insightType])
+  const tabs = [
+    { key: 'tenun', label: 'Panduan Tenun', show: role === 'seller' },
+    { key: 'overview', label: 'Ringkasan', show: true },
+    { key: 'health', label: 'Health Score', show: role === 'seller' },
+    { key: 'stock', label: 'Stok & Diskon', show: role === 'seller' },
+  ]
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+      <header className="border-b pb-4">
+        <h1 className="text-2xl font-bold text-gray-900">AI Business Insight</h1>
+        <p className="text-sm text-gray-500">Keputusan cerdas berbasis data untuk wastra Anda.</p>
+      </header>
 
-      {/* NAV SELLER */}
-      {mode === 'seller' && (
-        <div className="flex gap-2 flex-wrap">
-          {[
-            [INSIGHT.TENUN, 'Panduan Tenun'],
-            [INSIGHT.OVERVIEW, 'Ringkasan'],
-            [INSIGHT.HEALTH, 'Health Score'],
-            [INSIGHT.STOCK, 'Stok & Diskon'],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => {
-                setInsightType(key)
-                if (key !== INSIGHT.TENUN) setData(null)
-              }}
-              className={`px-3 py-1 rounded text-sm ${
-                insightType === key
-                  ? 'bg-indigo-100 text-indigo-700'
-                  : 'bg-gray-100'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+      {/* Navigation Tab */}
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {tabs.filter(t => t.show).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+              activeTab === tab.key ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Render Logic */}
+      {isLoading && activeTab !== 'tenun' && <AiSkeleton />}
+      
+      {isError && (
+        <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-100">
+          Gagal memuat data. Pastikan koneksi internet Anda stabil.
         </div>
       )}
 
-      {/* BUYER */}
-      {mode === 'buyer' && (
-        <p className="text-sm text-gray-500">
-          Insight dihasilkan dari data penjualan & ulasan produk.
-        </p>
-      )}
-
-      {loading && <AiSkeleton />}
-
-      {/* CONTENT */}
-      {data && insightType === INSIGHT.OVERVIEW && (
-        <AiInsightContent data={data} mode={mode} />
-      )}
-
-      {mode === 'seller' && data && insightType === INSIGHT.HEALTH && (
-        <HealthScoreContent data={data} />
-      )}
-
-      {mode === 'seller' && data && insightType === INSIGHT.STOCK && (
-        <StockDiscountContent data={data} />
-      )}
-
-      {mode === 'seller' && insightType === INSIGHT.TENUN && (
-        <TenunGuideSection />
-      )}
+      <main className="animate-in fade-in duration-500">
+        {activeTab === 'tenun' && <TenunGuideSection />}
+        {data && activeTab === 'overview' && <AiInsightContent data={data} mode={role} />}
+        {data && activeTab === 'health' && <HealthScoreContent data={data} />}
+        {data && activeTab === 'stock' && <StockDiscountContent data={data} />}
+      </main>
     </div>
   )
 }
