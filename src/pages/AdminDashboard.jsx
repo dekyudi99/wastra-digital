@@ -49,16 +49,19 @@ const AdminDashboard = () => {
     retry: false,
   })
 
-  const { data: totalP } = useQuery({
+  const { data: totalP, loadingTotalP } = useQuery({
     queryKey: ['totalP'],
     queryFn: adminApi.totalPendaftaran,
-    retry: false,
   })
 
-  const { data: totalA } = useQuery({
+  const { data: totalA, loading: loadingTotalA } = useQuery({
     queryKey: ['totalA'],
     queryFn: adminApi.totalActiveArtisan,
-    retry: false,
+  })
+
+  const { data: commisionD, isLoading: loadingCommision } = useQuery({
+    queryKey: ['totalA'],
+    queryFn: adminApi.commision,
   })
 
   // =========================================
@@ -68,10 +71,21 @@ const AdminDashboard = () => {
     apiResponse?.data?.data ?? dummyDashboard
 
   const totalPendaftaran =
-    totalP?.data?.data?.total ?? 8
+    totalP?.data?.data?.total 
 
   const totalActiveArtisan =
-    totalA?.data?.data?.total ?? 15
+    totalA?.data?.data?.total 
+
+  const commisionData = 
+    commisionD?.data?.data?.saldo
+
+  if (loadingCommision || loadingTotalA || loadingTotalP || isLoading) {
+    return (
+      <div className='flex justify-center items-start'>
+        <Spin size='large'/>
+      </div>
+    )
+  }
 
   // =========================================
   // 🔹 STAT CARDS
@@ -140,7 +154,7 @@ const AdminDashboard = () => {
           >
             <Statistic
               title="Komisi BUMDes (10%)"
-              value={dashboardData.stats.commission}
+              value={commisionData}
               formatter={formatPrice}
               valueStyle={{
                 color: '#059669',

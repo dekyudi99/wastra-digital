@@ -5,7 +5,7 @@ const adminApi = {
         return axiosClient.get('admin/totalisArtisan')
     },
     listPendaftaran: (page = 1) => {
-        return axiosClient.get(`/admin/artisan/list?page=${page}`)
+        return axiosClient.get(`admin/artisan/list?page=${page}`)
     },
     confirm: (id) => {
         return axiosClient.put(`admin/confirm/${id}`)
@@ -19,6 +19,9 @@ const adminApi = {
     deactive: (id) => {
         return axiosClient.put(`admin/deactive/${id}`)
     },
+    commision: () => {
+        return axiosClient.get(`admin/commision`)
+    }
 }
 
 export default adminApi

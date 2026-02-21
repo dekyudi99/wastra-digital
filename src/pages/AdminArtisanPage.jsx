@@ -75,7 +75,7 @@ const AdminArtisanPage = () => {
     {
       title: "Status",
       render: (_, record) =>
-        record.isArtisan ? (
+        record.status == 'approved' ? (
           <Tag color="green">Terkonfirmasi</Tag>
         ) : (
           <Tag color="orange">Menunggu</Tag>
@@ -104,18 +104,20 @@ const AdminArtisanPage = () => {
         Daftar Pendaftaran Pengrajin
       </h1>
 
-      <Table
-        columns={columns}
-        dataSource={rows}
-        rowKey="id"
-        bordered
-        pagination={{
-          current: paginationData.current_page,
-          pageSize: paginationData.per_page,
-          total: paginationData.total,
-          onChange: (page) => setPage(page),
-        }}
-      />
+      <div className="overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={rows}
+          rowKey="id"
+          bordered
+          pagination={{
+            current: paginationData.current_page,
+            pageSize: paginationData.per_page,
+            total: paginationData.total,
+            onChange: (page) => setPage(page),
+          }}
+        />
+      </div>
     </div>
   )
 }

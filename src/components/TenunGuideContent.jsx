@@ -62,10 +62,10 @@ const TenunGuideContent = ({ data }) => {
              <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-25"></div>
                 <img 
-                  src={imageUrl} 
+                  src={imageUrl}
                   alt="AI Motif Result" 
                   className="relative max-w-sm h-auto rounded-xl shadow-2xl border-4 border-white" 
-                  crossOrigin="anonymous"
+                  // crossOrigin="anonymous"
                 />
              </div>
              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visualisasi Motif Master AI</p>
