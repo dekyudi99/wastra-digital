@@ -21,6 +21,9 @@ const adminApi = {
     },
     commision: () => {
         return axiosClient.get(`admin/commision`)
+    },
+    onProgress: () => {
+        return axiosClient.get('admin/order/on-progress')
     }
 }
 

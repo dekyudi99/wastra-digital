@@ -51,7 +51,7 @@ const UserProfile = () => {
       setPreviewImage(null);
       setFileList([])
     },
-    onError: (err) => message.error(err.response?.data?.message || 'Gagal update profil')
+    onError: (err) => message.error(err?.response?.data?.message || 'Gagal update profil')
   })
 
   // MUTATION: Change Password
@@ -61,7 +61,7 @@ const UserProfile = () => {
       message.success('Password berhasil diubah')
       passwordForm.resetFields()
     },
-    onError: (err) => message.error(err.response?.data?.message || 'Gagal ubah password')
+    onError: (err) => message.error(err?.response?.data?.message || 'Gagal ubah password')
   })
 
   const handleUpdateProfile = (values) => {
@@ -158,7 +158,7 @@ const UserProfile = () => {
               <Form.Item name="role" label="Peran">
                 <Input size="large" disabled />
               </Form.Item>
-              <Button type="primary" htmlType="submit" size="large" block loading={updateProfile.isLoading} className="bg-wastra-brown-600">
+              <Button type="primary" htmlType="submit" size="large" block loading={updateProfile.isPending} className="bg-wastra-brown-600">
                 Simpan Perubahan
               </Button>
             </Form>

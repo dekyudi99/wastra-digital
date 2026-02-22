@@ -60,8 +60,13 @@ const AdminDashboard = () => {
   })
 
   const { data: commisionD, isLoading: loadingCommision } = useQuery({
-    queryKey: ['totalA'],
+    queryKey: ['commision'],
     queryFn: adminApi.commision,
+  })
+
+  const { data: onProgressResponse, isLoading: loadingOnProgress} = useQuery({
+    queryKey: ["onProgress"],
+    queryFn: adminApi.onProgress,
   })
 
   // =========================================
@@ -79,9 +84,9 @@ const AdminDashboard = () => {
   const commisionData = 
     commisionD?.data?.data?.saldo
 
-  if (loadingCommision || loadingTotalA || loadingTotalP || isLoading) {
+  if (loadingCommision || loadingTotalA || loadingTotalP || isLoading || loadingOnProgress) {
     return (
-      <div className='flex justify-center items-start'>
+      <div className='flex justify-center items-start mt-8'>
         <Spin size='large'/>
       </div>
     )
@@ -107,7 +112,7 @@ const AdminDashboard = () => {
     },
     {
       title: 'Pesanan Berjalan',
-      value: dashboardData.stats.ongoing_orders,
+      value: onProgressResponse?.data?.data?.total,
       icon: <TruckIcon className="w-6 h-6" />,
       color: '#0EA5E9',
       url: '',
@@ -214,35 +219,37 @@ const AdminDashboard = () => {
         title="Performa Pengrajin Terbaik"
         className="rounded-xl shadow-sm"
       >
-        <Table
-          dataSource={dashboardData.top_artisans}
-          rowKey="id"
-          pagination={false}
-          columns={[
-            {
-              title: 'Nama Pengrajin',
-              dataIndex: 'name',
-              key: 'name',
-              render: (t) => <strong>{t}</strong>,
-            },
-            {
-              title: 'Email',
-              dataIndex: 'email',
-              key: 'email',
-            },
-            {
-              title: 'Total Item Terjual',
-              dataIndex: 'items_sold',
-              key: 'sold',
-              align: 'center',
-              render: (v) => (
-                <Tag color="blue">
-                  {v || 0} Produk
-                </Tag>
-              ),
-            },
-          ]}
-        />
+        <div className='overflow-x-auto'>
+          <Table
+            dataSource={dashboardData.top_artisans}
+            rowKey="id"
+            pagination={false}
+            columns={[
+              {
+                title: 'Nama Pengrajin',
+                dataIndex: 'name',
+                key: 'name',
+                render: (t) => <strong>{t}</strong>,
+              },
+              {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email',
+              },
+              {
+                title: 'Total Item Terjual',
+                dataIndex: 'items_sold',
+                key: 'sold',
+                align: 'center',
+                render: (v) => (
+                  <Tag color="blue">
+                    {v || 0} Produk
+                  </Tag>
+                ),
+              },
+            ]}
+          />
+        </div>
       </Card>
     </div>
   )
