@@ -33,7 +33,7 @@ const productApi = {
         )
     },
     delete: (id) => {
-        return axiosClient.post(`product/delete/${id}`)
+        return axiosClient.delete(`product/delete/${id}`)
     },
     songket: () => {
         return axiosClient.get('product/songket')
