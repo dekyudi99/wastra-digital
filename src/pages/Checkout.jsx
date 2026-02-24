@@ -184,7 +184,7 @@ const Checkout = () => {
         <Card title="Ringkasan Pembayaran">
           <div className="space-y-2">
             <div className="flex justify-between"><span>Subtotal</span><span>{formatPrice(totalAmount)}</span></div>
-            <div className="flex justify-between"><span>Biaya Pengiriman</span><span className="text-red-600">Gratis Tapi Ambil Sendiri!</span></div>
+            <div className="flex justify-between"><span>Biaya Pengiriman</span><span className="">-</span></div>
             <div className="flex justify-between border-t pt-2 font-bold text-lg">
               <span>Total Tagihan</span>
               <span className="text-red-600">{formatPrice(totalAmount)}</span>

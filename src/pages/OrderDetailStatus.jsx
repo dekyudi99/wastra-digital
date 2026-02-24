@@ -46,6 +46,15 @@ const OrderDetailStatus = () => {
         }
     })
 
+    const confirmStatusMutation = useMutation({
+        mutationFn: ({ orderItemId, status }) => orderApi.confirmReceived(orderItemId, status),
+        onSuccess: () => {
+            message.success(`Status item diperbarui`)
+            queryClient.invalidateQueries(["order", id])
+        },
+        onError: (err) => message.error(err.response?.data?.message || 'Gagal update status')
+    })
+
     if (loadingDetail) {
         return (
             <div className="flex justify-center items-center h-screen">
@@ -167,8 +176,22 @@ const OrderDetailStatus = () => {
                 )
             }
             <Button
-                disabled={statusRate[orderDetail.item_status]==5 || orderDetail.order.payment_status == 'unpaid'}
-                className="p-2 w-48 bg-wastra-brown-700 rounded-none hover:bg-wastra-brown-500 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                loading={confirmStatusMutation.isPending}
+                onClick={ () => 
+                    Modal.confirm({
+                        title: 'Selesaikan Pesanan!',
+                        icon: <ExclamationTriangleIcon className="h-7" />,
+                        content: 'Apakah anda yakin ingin menyelesaikan pesanan ini?',
+                        okText: 'Ya',
+                        cancelText: 'Batal',
+                        okType: 'primary',
+                        onOk: () => {
+                            confirmStatusMutation.mutate({ orderItemId: id, status: 'finish' })
+                        },
+                    })
+                }
+                disabled={statusRate[orderDetail.item_status] >=4 || orderDetail.order.payment_status == 'unpaid'}
+                className="p-2 w-48 bg-wastra-brown-700 rounded-none hover:bg-wastra-brown-500 text-white disabled:bg-gray-400 disabled:cursor-not-allowed disabled:text-white"
             >
                 Tandai Selesai
             </Button>
@@ -185,12 +208,12 @@ const OrderDetailStatus = () => {
                         onOk: () => {
                             cancelOrder.mutate({ 
                                 id: id, 
-                                reason: "Pesanan Batal" 
+                                reason: "Pesanan Batal"
                             });
                         },
                     })
                 }
-                disabled={statusRate[orderDetail.item_status]>2}
+                disabled={statusRate[orderDetail.item_status]>0}
                 className="p-2 bg-white rounded-none text-gray-800 w-48 hover:bg-gray-100 disabled:bg-gray-400 disabled:text-white disabled:cursor-not-allowed"
             >
                 Batalkan

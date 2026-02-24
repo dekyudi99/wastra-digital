@@ -82,7 +82,7 @@ const AdminDashboard = () => {
     totalA?.data?.data?.total 
 
   const commisionData = 
-    commisionD?.data?.data?.saldo
+    commisionD?.data?.data?.saldo 
 
   if (loadingCommision || loadingTotalA || loadingTotalP || isLoading || loadingOnProgress) {
     return (

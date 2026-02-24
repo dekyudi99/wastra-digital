@@ -43,7 +43,10 @@ const OrderDetail = () => {
         mutationKey: ["paymentKey", id],
         mutationFn: () => paymentApi.pay(id),
         onSuccess: (response) => {
-            
+            window.location.href = response.data.payment_url
+        },
+        onError: (error) => {
+            message.error(error?.response?.data?.message || "Pembayaran Gagal")
         }
     })
 
@@ -106,10 +109,30 @@ const OrderDetail = () => {
             </div>
         </div>
         <div className="flex flex-col items-end mt-4 space-y-2">
-            <Button className="w-32 rounded-none bg-wastra-brown-700 text-white font-semibold">Bayar Sekarang</Button>
+            <Button
+                loading={paymentMutation.isPending}
+                onClick={() => {
+                    Modal.confirm({
+                        title: 'Bayar Sekarang!',
+                        icon: <ExclamationTriangleIcon className="h-7" />,
+                        content: 'Apakah anda yakin ingin membayar sekarang?',
+                        okText: 'Ya',
+                        cancelText: 'Batal',
+                        okType: 'primary',
+                        onOk: () => {
+                            paymentMutation.mutate()
+                        },
+                    })
+                }}
+                disabled={orderDetail.order_status == 'cancelled'}
+                className="w-32 rounded-none bg-wastra-brown-700 text-white font-semibold disabled:cursor-not-allowed disabled:bg-gray-500 disabled:text-white"
+            >
+                Bayar Sekarang
+            </Button>
             <Button
                 type="button"
                 loading={cancelMutation.isPending}
+                disabled={orderDetail.order_status == 'cancelled'}
                 onClick={() => {
                     Modal.confirm({
                         title: 'Batalkan Pesanan!',
@@ -123,7 +146,7 @@ const OrderDetail = () => {
                         },
                     })
                 }}
-                className="w-32 rounded-none bg-red-700 text-white font-semibold"
+                className="w-32 rounded-none bg-red-700 text-white font-semibold disabled:cursor-not-allowed disabled:bg-gray-500"
             >
                 Batalkan
             </Button>

@@ -30,7 +30,8 @@ const ListOrder = () => {
         {cat: 'pending', label: 'Menunggu Konfirmasi'},
         {cat: 'processing', label: 'Sedang Diproses'},
         {cat: 'shipped', label: 'Dikemas'},
-        {cat: 'completed', label: 'Selesai'},
+        {cat: 'completed', label: 'Pesanan Sampai'},
+        {cat: 'finish', label: 'Selesai'},
         {cat: 'cancelled', label: 'Dibatalkan'}
     ];
 

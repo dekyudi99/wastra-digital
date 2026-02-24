@@ -96,6 +96,11 @@ const Header = () => {
       roles: ['guest', 'customer', 'artisan', 'admin'],
     },
     {
+      label: 'Pesanan',
+      roles: ['customer'],
+      path: '/pesanan/list',
+    },
+    {
       label: 'Pengrajin',
       roles: ['artisan'],
       children: [
@@ -301,39 +306,43 @@ const Header = () => {
               >
                 <BellIcon className="w-5 h-5" />
               </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isAuthenticated) {
-                    Modal.confirm({
-                      title: 'Login Diperlukan',
-                      icon: <ExclamationCircleOutlined/>,
-                      content: 'Silakan login terlebih dahulu untuk melihat keranjang.',
-                      okText: 'Login',
-                      cancelText: 'Batal',
-                      okType: 'primary',
-                      onOk: () => {
-                        navigate(`/masuk?redirect=${encodeURIComponent('/keranjang')}`)
-                      },
-                    })
-                    return
-                  }
-                  navigate('/keranjang')
-                }}
-                className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative"
-              >
-                <ShoppingBagIcon className="w-5 h-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
-                    {isLoadingCart?
-                      <Spin size='small'/>
-                      :
-                      cartCount
-                    }
-                  </span>
-                )}
-              </button>
+              
+              {
+                user?.role == 'customer' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!isAuthenticated) {
+                        Modal.confirm({
+                          title: 'Login Diperlukan',
+                          icon: <ExclamationCircleOutlined/>,
+                          content: 'Silakan login terlebih dahulu untuk melihat keranjang.',
+                          okText: 'Login',
+                          cancelText: 'Batal',
+                          okType: 'primary',
+                          onOk: () => {
+                            navigate(`/masuk?redirect=${encodeURIComponent('/keranjang')}`)
+                          },
+                        })
+                        return
+                      }
+                      navigate('/keranjang')
+                    }}
+                    className="w-10 h-10 bg-wastra-brown-50 border border-wastra-brown-100 rounded-lg flex items-center justify-center text-wastra-brown-700 hover:bg-wastra-brown-100 transition-colors relative"
+                  >
+                    <ShoppingBagIcon className="w-5 h-5" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-wastra-brown-600 text-white text-xs rounded-full flex items-center justify-center font-medium border-2 border-white">
+                        {isLoadingCart?
+                          <Spin size='small'/>
+                          :
+                          cartCount
+                        }
+                      </span>
+                    )}
+                  </button>
+                )
+              }
 
               {isAuthenticated ? (
                 <Dropdown

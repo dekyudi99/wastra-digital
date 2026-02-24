@@ -273,7 +273,7 @@ const ArtisanProducts = () => {
                 <Button 
                   type="primary" 
                   htmlType="submit" 
-                  loading={submitMutation.isLoading} 
+                  loading={submitMutation.isPending} 
                   className="bg-wastra-brown-600 border-none px-8"
                 >
                   {isEditMode ? 'Perbarui Produk' : 'Simpan Produk'}
