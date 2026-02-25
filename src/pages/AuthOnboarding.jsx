@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button, Card, Steps, Form, Input, message } from 'antd'
 import { BuildingOffice2Icon, UserIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import { AUTH_STORAGE_KEYS, ROLE_DESCRIPTIONS_ID, ROLE_LABELS_ID, USER_ROLES } from '../utils/authRoles'
-import { useUser } from '../contexts/UserContext'
 
 const roleCards = [
   {

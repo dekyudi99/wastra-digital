@@ -7,6 +7,18 @@ import { formatPrice } from '../utils/format'
 import productApi from '../api/ProductApi'
 import AiFloatingButton from '../components/AiFloatingButton'
 
+const beforeUpload = (file) => {
+  const isLt2M = file.size / 1024 / 1024 < 2;
+
+  if (!isLt2M) {
+    message.error('Ukuran file tidak boleh lebih dari 2MB!');
+    
+    return Upload.LIST_IGNORE; 
+  }
+
+  return isLt2M;
+};
+
 const { Option } = Select
 const { TextArea } = Input
 
@@ -77,7 +89,9 @@ const ArtisanProducts = () => {
       queryClient.invalidateQueries(['myProducts'])
       navigate('/pengrajin/produk')
     },
-    onError: (err) => message.error(err.response?.data?.message || 'Gagal menyimpan data')
+    onError: (err) => {
+      message.error(err.response?.data?.message || 'Gagal menyimpan data ')
+    }
   })
 
   const handleSubmit = (values) => {
@@ -255,7 +269,7 @@ const ArtisanProducts = () => {
                   fileList={fileList}
                   onPreview={() => {}} // Anda bisa menambahkan Modal preview jika butuh
                   onChange={({ fileList }) => setFileList(fileList)}
-                  beforeUpload={() => false} // Menunda upload otomatis ke server
+                  beforeUpload={beforeUpload} 
                 >
                   {fileList.length < 5 && (
                     <div className="flex flex-col items-center">
