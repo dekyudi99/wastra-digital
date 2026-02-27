@@ -24,6 +24,15 @@ const adminApi = {
     },
     onProgress: () => {
         return axiosClient.get('admin/order/on-progress')
+    },
+    orderItem: () => {
+        return axiosClient.get('admin/new-order')
+    },
+    logging: () => {
+        return axiosClient.get('admin/logging')
+    },
+    activeArtisanList: (page = 1) => {
+        return axiosClient.get(`admin/active/artisan/list?page=${page}`)
     }
 }
 

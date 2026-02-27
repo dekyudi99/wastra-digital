@@ -7,7 +7,7 @@ const AiFloatingButton = () => {
 
   return (
     <button
-      onClick={() => navigate('/ai')}
+      onClick={() => navigate('/chat/wastraAi')}
       className="
         fixed bottom-6 right-6 z-50
         w-14 h-14 rounded-full

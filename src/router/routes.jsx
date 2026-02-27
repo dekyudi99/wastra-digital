@@ -41,8 +41,11 @@ import OrderDetailStatus from "../pages/OrderDetailStatus";
 import OrderDetail from "../pages/OrderDetail";
 import PaymentSuccess from "../pages/PaymentSuccess";
 import Withdrawal from "../pages/Withdrawal";
+import OpenAi from "../pages/OpenAi";
+import AdminActiveArtisanList from "../pages/AdminActiveArtisanList";
 
 const routes = createBrowserRouter([
+  { path: "chat/wastraAi", element:<OpenAi/>, loader: loginShield},
   { path: '/payment/success', element:<PaymentSuccess/>},
   {
     path: "/",
@@ -104,7 +107,8 @@ const routes = createBrowserRouter([
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: "produk", element: <AdminProductManagement /> },
-          { path: "pengrajin/daftar", element: <AdminArtisanPage /> }
+          { path: "pengrajin/daftar", element: <AdminArtisanPage /> },
+          { path: "pengrajin/aktif", element: <AdminActiveArtisanList/> }
         ]
       },
     ]

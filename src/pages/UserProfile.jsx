@@ -9,6 +9,18 @@ import { Link } from 'react-router-dom'
 
 const { TabPane } = Tabs
 
+const beforeUpload = (file) => {
+  const isLt2M = file.size / 1024 / 1024 < 2;
+
+  if (!isLt2M) {
+    message.error('Ukuran file tidak boleh lebih dari 2MB!');
+    
+    return Upload.LIST_IGNORE; 
+  }
+
+  return isLt2M;
+};
+
 const UserProfile = () => {
   useEffect(()=>{
     document.title = "Profil | Wastra Digital"  
@@ -112,7 +124,7 @@ const UserProfile = () => {
               <Upload
                 listType="picture-circle"
                 showUploadList={false}
-                beforeUpload={() => false} // Mencegah upload otomatis
+                beforeUpload={beforeUpload}
                 onChange={handlePreview}
               >
                 <div className="relative">

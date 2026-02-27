@@ -87,7 +87,7 @@ const AdminArtisanPage = () => {
         <Space>
           <Button
             type="primary"
-            disabled={record.isArtisan}
+            disabled={record.status == 'approved'}
             loading={confirmMutation.isLoading}
             onClick={() => confirmMutation.mutate(record.id)}
           >

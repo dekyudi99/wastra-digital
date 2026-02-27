@@ -163,7 +163,48 @@ export const districts = {
     { id: 'tasifeto-barat', name: 'Tasifeto Barat' },
   ],
 
-  // Bali (fokus Karangasem)
+  // Bali
+  badung: [
+    { id: 'abiansemal', name: 'Abiansemal' },
+    { id: 'kuta', name: 'Kuta' },
+    { id: 'kuta_selatan', name: 'Kuta Selatan' },
+    { id: 'kuta_utara', name: 'Kuta Utara' },
+    { id: 'mengwi', name: 'Mengwi' },
+    { id: 'petang', name: 'Petang' },
+  ],
+  bangli: [
+    { id: 'bangli', name: 'Bangli' },
+    { id: 'kintamani', name: 'Kintamani' },
+    { id: 'susut', name: 'Susut' },
+    { id: 'tembuku', name: 'Tembuku' },
+  ],
+  buleleng: [
+    { id: 'banjar', name: 'Banjar' },
+    { id: 'buleleng', name: 'Buleleng' },
+    { id: 'busungbiu', name: 'Busungbiu' },
+    { id: 'gerokgak', name: 'Gerokgak' },
+    { id: 'kubutambahan', name: 'Kubutambahan' },
+    { id: 'sawan', name: 'Sawan' },
+    { id: 'seririt', name: 'Seririt' },
+    { id: 'sukasada', name: 'Sukasada' },
+    { id: 'tejakula', name: 'Tejakula' },
+  ],
+  gianyar: [
+    { id: 'blahbatuh', name: 'Blahbatuh' },
+    { id: 'gianyar', name: 'Gianyar' },
+    { id: 'payangan', name: 'Payangan' },
+    { id: 'sukawati', name: 'Sukawati' },
+    { id: 'tampaksiring', name: 'Tampaksiring' },
+    { id: 'tegallalang', name: 'Tegallalang' },
+    { id: 'ubud', name: 'Ubud' },
+  ],
+  jembrana: [
+    { id: 'jembrana', name: 'Jembrana' },
+    { id: 'melaya', name: 'Melaya' },
+    { id: 'mendoyo', name: 'Mendoyo' },
+    { id: 'negara', name: 'Negara' },
+    { id: 'pekutatan', name: 'Pekutatan' },
+  ],
   karangasem: [
     { id: 'abang', name: 'Abang' },
     { id: 'bebandem', name: 'Bebandem' },
@@ -173,6 +214,30 @@ export const districts = {
     { id: 'rendang', name: 'Rendang' },
     { id: 'selat', name: 'Selat' },
     { id: 'sidemen', name: 'Sidemen' },
+  ],
+  klungkung: [
+    { id: 'banjarangkan', name: 'Banjarangkan' },
+    { id: 'dawan', name: 'Dawan' },
+    { id: 'klungkung', name: 'Klungkung' },
+    { id: 'nusa_penida', name: 'Nusa Penida' },
+  ],
+  tabanan: [
+    { id: 'baturiti', name: 'Baturiti' },
+    { id: 'kediri', name: 'Kediri' },
+    { id: 'kerambitan', name: 'Kerambitan' },
+    { id: 'marga', name: 'Marga' },
+    { id: 'penebel', name: 'Penebel' },
+    { id: 'pupuan', name: 'Pupuan' },
+    { id: 'selemadeg', name: 'Selemadeg' },
+    { id: 'selemadeg_barat', name: 'Selemadeg Barat' },
+    { id: 'selemadeg_timur', name: 'Selemadeg Timur' },
+    { id: 'tabanan', name: 'Tabanan' },
+  ],
+  denpasar: [
+    { id: 'denpasar_barat', name: 'Denpasar Barat' },
+    { id: 'denpasar_selatan', name: 'Denpasar Selatan' },
+    { id: 'denpasar_timur', name: 'Denpasar Timur' },
+    { id: 'denpasar_utara', name: 'Denpasar Utara' },
   ],
 
   // Jawa Timur (contoh)

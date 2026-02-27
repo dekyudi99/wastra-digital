@@ -17,9 +17,19 @@ const STATUS_MAP = {
   pending: { label: 'Menunggu Konfirmasi', color: 'orange' },
   processing: { label: 'Diproses', color: 'blue' },
   shipped: { label: 'Dikirim', color: 'cyan' },
-  completed: { label: 'Selesai (Penjual)', color: 'green' }, // Dari sisi Anda
-  finish: { label: 'Selesai (Pembeli)', color: 'gold' },      // Konfirmasi pembeli
+  completed: { label: 'Selesai (Penjual)', color: 'green' },
+  finish: { label: 'Selesai (Pembeli)', color: 'gold' },
   cancelled: { label: 'Dibatalkan', color: 'red' },
+}
+
+const PAYMENT_METHOD_MAP = {
+  cod: {label: 'COD'},
+  midtrans: {label: 'TRANSFER'},
+}
+
+const PAYMENT_STATUS_MAP = {
+  unpaid: { label: 'Belum Dibayar' },
+  settled: { label: 'Sudah Dibayar' }
 }
 
 const ArtisanOrders = () => {
@@ -134,9 +144,14 @@ const ArtisanOrders = () => {
                 <Descriptions.Item label="Nama Pembeli">{orderDetail[0].order.buyer.name}</Descriptions.Item>
                 <Descriptions.Item label="No. Telepon">{orderDetail[0].order.buyer.phone}</Descriptions.Item>
                 <Descriptions.Item label="Alamat Pengiriman" span={2}>{orderDetail[0].order.shipping_address}</Descriptions.Item>
+                <Descriptions.Item label="Metode Pembayaran">
+                  <Tag color={orderDetail[0].order.payment_method === 'midtrans' ? 'green' : 'red'}>
+                    {PAYMENT_METHOD_MAP[orderDetail[0].order.payment_method].label}
+                  </Tag>
+                </Descriptions.Item>
                 <Descriptions.Item label="Status Pembayaran">
-                  <Tag color={orderDetail.payment_status === 'settled' ? 'green' : 'red'}>
-                    {orderDetail[0].order.payment_status?.toUpperCase()}
+                  <Tag color={orderDetail[0].order.payment_status == 'settled' ? 'green' : 'red'}>
+                    {PAYMENT_STATUS_MAP[orderDetail[0].order.payment_status].label}
                   </Tag>
                 </Descriptions.Item>
               </Descriptions>

@@ -10,31 +10,13 @@ import { useQuery } from '@tanstack/react-query'
 import { formatPrice } from '../utils/format'
 import orderApi from '../api/OrderApi'
 import adminApi from '../api/AdminApi'
+import formatTanggal from '../utils/formatTanggal'
+import formatToCamelCase from '../utils/formatToCamelCase'
 
-const COMMISSION_RATE = 0.1
-
-// =============================
-// 🔹 DUMMY DATA
-// =============================
-const dummyDashboard = {
-  stats: {
-    ongoing_orders: 12,
-    commission: 1250000,
-    total_revenue: 12500000,
-  },
-  revenue_chart: [
-    { month: 'Jan', total: 2000000 },
-    { month: 'Feb', total: 1800000 },
-    { month: 'Mar', total: 2500000 },
-    { month: 'Apr', total: 1500000 },
-    { month: 'Mei', total: 3000000 },
-    { month: 'Jun', total: 2200000 },
-  ],
-  top_artisans: [
-    { id: 1, name: 'I Wayan Tenun', email: 'wayan@email.com', items_sold: 45 },
-    { id: 2, name: 'Ni Luh Wastra', email: 'luh@email.com', items_sold: 38 },
-    { id: 3, name: 'Made Kain', email: 'made@email.com', items_sold: 29 },
-  ],
+const ROLE_MAP = {
+  customer: {label: "Pembeli"},
+  artisan: {label: "Pengrajin"},
+  admin: {label: "Admin"}
 }
 
 const AdminDashboard = () => {
@@ -43,11 +25,6 @@ const AdminDashboard = () => {
   // =========================================
   // 🔹 API (optional - fallback ke dummy)
   // =========================================
-  const { data: apiResponse, isLoading } = useQuery({
-    queryKey: ['adminDashboardStats'],
-    queryFn: () => orderApi.adminDashboardStats(),
-    retry: false,
-  })
 
   const { data: totalP, loadingTotalP } = useQuery({
     queryKey: ['totalP'],
@@ -69,22 +46,36 @@ const AdminDashboard = () => {
     queryFn: adminApi.onProgress,
   })
 
+  const { data: orderItem, isLoading: loadingOrderItem} = useQuery({
+    queryKey: ["orderItem"],
+    queryFn: adminApi.orderItem,
+  })
+
+  const { data: loggingResponse, isLoading: loadingLogging} = useQuery({
+    queryKey: ["logging"],
+    queryFn: adminApi.logging,
+  })
+
   // =========================================
   // 🔹 SAFE DATA HANDLING
   // =========================================
-  const dashboardData =
-    apiResponse?.data?.data ?? dummyDashboard
 
   const totalPendaftaran =
-    totalP?.data?.data?.total 
+    totalP?.data?.data?.total || 0
 
   const totalActiveArtisan =
-    totalA?.data?.data?.total 
+    totalA?.data?.data?.total || 0
 
   const commisionData = 
-    commisionD?.data?.data?.saldo 
+    commisionD?.data?.data?.saldo || 0
 
-  if (loadingCommision || loadingTotalA || loadingTotalP || isLoading || loadingOnProgress) {
+  const orderI = 
+    orderItem?.data?.data
+
+  const loggingData = 
+    loggingResponse?.data?.data
+
+  if (loadingCommision || loadingTotalA || loadingTotalP || loadingOnProgress || loadingOrderItem || loadingLogging) {
     return (
       <div className='flex justify-center items-start mt-8'>
         <Spin size='large'/>
@@ -92,16 +83,76 @@ const AdminDashboard = () => {
     )
   }
 
-  // =========================================
-  // 🔹 STAT CARDS
-  // =========================================
+  const columns = [
+    {
+      title: "No",
+      render: (_, __, index) => index +1
+    },
+    {
+      title: "Tanggal",
+      dataIndex: "created_at",
+      render: (_, record) => formatTanggal(record.created_at)
+    },
+    {
+      title: "Pembeli",
+      dataIndex: ["order", "buyer", "name"],
+    },
+    {
+      title: "Pengrajin",
+      dataIndex: ["seller", "name"],
+    },
+    {
+      title: "Subtotal",
+      dataIndex: "subtotal",
+      render: (_, record) => formatPrice(record.subtotal)
+    },
+    {
+      title: "Status",
+      dataIndex: "item_status",
+    },
+    {
+      title: "Estimasi Pendapatan",
+      dataIndex: "subtotal",
+      render: (_, record) => 
+        <Tag color={'green'}>
+          +{formatPrice((record.subtotal*10)/100)}
+        </Tag>
+    },
+  ]
+
+  const columnsLogging = [
+    {
+      title: "No",
+      render: (_, __, index) => index+1,
+    },
+    {
+      title: "Tanggal",
+      dataIndex: "created_at",
+      render: (_, record) => formatTanggal(record.created_at),
+    },
+    {
+      title: "Pengguna",
+      dataIndex: ["user", "name"],
+    },
+    {
+      title: "Peran",
+      dataIndex: "actor_role",
+      render: (_, record) => ROLE_MAP[record.actor_role].label
+    },
+    {
+      title: "Aksi",
+      dataIndex: "action",
+      render: (_, record) => formatToCamelCase(record.action)
+    }
+  ]
+
   const statsCards = [
     {
       title: 'Pengrajin Aktif',
       value: totalActiveArtisan,
       icon: <UserGroupIcon className="w-6 h-6" />,
       color: '#78350F',
-      url: '',
+      url: 'pengrajin/aktif',
     },
     {
       title: 'Pendaftaran Pengrajin',
@@ -171,86 +222,50 @@ const AdminDashboard = () => {
       </Row>
 
       {/* Revenue Chart */}
-      <Row gutter={[16, 16]} className="mb-8">
-        <Col xs={24}>
-          <Card
-            title="Tren Pendapatan Platform"
-            className="rounded-xl shadow-sm"
-          >
-            <div className="h-64 flex items-end justify-between gap-4">
-              {dashboardData.revenue_chart.map((item, idx) => {
-                const percentage =
-                  dashboardData.stats.total_revenue > 0
-                    ? (item.total /
-                        dashboardData.stats.total_revenue) *
-                      100
-                    : 10
-
-                return (
-                  <div
-                    key={idx}
-                    className="flex-1 flex flex-col items-center group"
-                  >
-                    <div className="text-[10px] mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {formatPrice(item.total)}
-                    </div>
-
-                    <div
-                      className="w-full bg-wastra-brown-400 rounded-t-lg transition-all hover:bg-wastra-brown-600"
-                      style={{
-                        height: `${percentage}%`,
-                        minHeight: '10%',
-                      }}
-                    />
-
-                    <div className="text-xs mt-2 text-gray-500 font-medium">
-                      {item.month}
-                    </div>
-                  </div>
-                )
-              })}
+      <div className='p-4 space-y-2'>
+        <div className='flex flex-row justify-between'>
+          <h2 className='font-bold text-xl'>Pesanan Terbaru</h2>
+          <Link className='text-blue-500 underline hover:text-blue-600'>Lihat Semua</Link>
+        </div>
+        <div className='overflow-x-auto'>
+          {
+            orderI?.length === 0?
+            <div className='w-full justify-center'>
+              <p>Belum ada pesanan!</p>
             </div>
-          </Card>
-        </Col>
-      </Row>
+            :
+            <Table
+              columns={columns}
+              dataSource={orderI}
+              rowKey={'id'}
+              pagination={false}
+            />
+          }
+        </div>
+      </div>
 
       {/* Top Artisans */}
-      <Card
-        title="Performa Pengrajin Terbaik"
-        className="rounded-xl shadow-sm"
-      >
-        <div className='overflow-x-auto'>
-          <Table
-            dataSource={dashboardData.top_artisans}
-            rowKey="id"
-            pagination={false}
-            columns={[
-              {
-                title: 'Nama Pengrajin',
-                dataIndex: 'name',
-                key: 'name',
-                render: (t) => <strong>{t}</strong>,
-              },
-              {
-                title: 'Email',
-                dataIndex: 'email',
-                key: 'email',
-              },
-              {
-                title: 'Total Item Terjual',
-                dataIndex: 'items_sold',
-                key: 'sold',
-                align: 'center',
-                render: (v) => (
-                  <Tag color="blue">
-                    {v || 0} Produk
-                  </Tag>
-                ),
-              },
-            ]}
-          />
+      <div className='p-4 space-y-2'>
+        <div className='flex flex-row justify-between'>
+          <h2 className='font-bold text-xl'>Aktivitas Terbaru</h2>
+          <Link className='text-blue-500 underline hover:text-blue-600'>Lihat Semua</Link>
         </div>
-      </Card>
+        <div className='overflow-x-auto'>
+          {
+            loggingData?.length === 0?
+            <div className='w-full justify-center'>
+              <p>Belum ada aksi apapun!</p>
+            </div>
+            :
+            <Table
+              columns={columnsLogging}
+              dataSource={loggingData}
+              rowKey={'id'}
+              pagination={false}
+            />
+          }
+        </div>
+      </div>
     </div>
   )
 }
